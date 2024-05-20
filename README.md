@@ -12,12 +12,12 @@
 </div>
 
 
-## 🎊News
+## 🎊News <!-- omit in toc -->
 
 - [2024.05.20] We open-source the code, weights and data of RLAIF-V!
 
 
-## 📜Brief Introduction
+## 📜Brief Introduction <!-- omit in toc -->
 
 We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source paradigm for super GPT-4V trustworthiness.  RLAIF-V maximally exploits the open-source feedback from two key perspectives, including high-quality feedback data and online feedback learning algorithm. Notable features of RLAIF-V include: 
 
@@ -49,11 +49,8 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 </table>
 
 
-## 📌Contents
+## 📌Contents <!-- omit in toc -->
 
-- [🎊News](#news)
-- [📜Brief Introduction](#brief-introduction)
-- [📌Contents](#contents)
 - [Dataset](#dataset)
 - [Install](#install)
 - [Model Weights](#model-weights)
@@ -62,8 +59,6 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 - [Evaluation](#evaluation)
   - [Object HalBench](#object-halbench)
   - [MMHalBench](#mmhalbench)
-- [Licenses](#licenses)
-- [Acknowledgement](#acknowledgement)
 
 ## Dataset
 
@@ -211,7 +206,7 @@ bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPEN
 ```
 
 
-## Licenses
+## Licenses <!-- omit in toc -->
 
 
 [![Code License](https://img.shields.io/badge/Code%20License-Apache_2.0-green.svg)](https://github.com/tatsu-lab/stanford_alpaca/blob/main/LICENSE)
@@ -221,7 +216,7 @@ bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPEN
 
 
 
-## Acknowledgement
+## Acknowledgement <!-- omit in toc -->
 
 - [RLHF-V](https://github.com/RLHF-V/RLHF-V): we refer to the scripts included in the repository.
 - [LLaVA](https://github.com/haotian-liu/LLaVA): the codebase we built upon.
