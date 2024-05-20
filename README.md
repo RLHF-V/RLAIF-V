@@ -31,7 +31,7 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 
 
 
-* 🤝 **High-quality Generalizable Feedback Data**. (a) RLAIF-V is compatible with other feedback sources. (b) The feedback data used during the first-iteration of RLAIF-V 12B **effectively reduce the hallucination of different MLLMs**.
+* 🤝 **High-quality Generalizable Feedback Data**. The feedback data used during the first-iteration of RLAIF-V 12B **effectively reduce the hallucination of different MLLMs**.
 
 <table align="center">
     <p align="center">
