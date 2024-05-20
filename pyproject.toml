@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "RLAIF_V"
+version = "1.0.0"
+description = "Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+]
+
+dependencies = [
+    "deepspeed==0.11.1", "huggingface_hub==0.17.0", "jsonlines==4.0.0",
+    "matplotlib==3.8.0", "nltk==3.8.1", "numpy==1.25.2", "openai==1.30.1",
+    "packaging==24.0", "pandas==2.2.2", "peft==0.10.0","sentencepiece==0.1.99",
+    "Pillow==10.3.0", "Requests==2.31.0", "shortuuid==1.0.13",
+    "spacy==3.7.2", "timm==0.9.10", "tokenizers==0.14.1", "torch==2.0.1",
+    "tqdm==4.66.1", "transformers==4.35.0","wandb==0.15.11",
+    "spacy==3.7.2",
+]
+
+[project.optional-dependencies]
+train = ["ninja", "wandb"]
+build = ["build", "twine"]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/RLHF-V/RLAIF-V/issues"
+
+[tool.setuptools.packages.find]
+exclude = ["assets*", "benchmark*", "docs", "dist*", "playground*", "scripts*", "tests*"]
+
+[tool.wheel]
+exclude = ["assets*", "benchmark*", "docs", "dist*", "playground*", "scripts*", "tests*"]
+
+[tool.poetry]
+packages = [
+    { include = "muffin", from = "." },
+]
