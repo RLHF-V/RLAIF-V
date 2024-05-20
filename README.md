@@ -97,6 +97,7 @@ python -m spacy download en-core-web-trf
 | **RLAIF-V-7B**  | Based on LLaVA 1.5 7B, providing efficient inference. | [🤗RLAIF-V-7B](https://huggingface.co/xiaomanlu/RLAIF-V-7B/) | 
 | **RLAIF-V-12B** | Based on OmniLMM-12B, achieving super GPT-4V trustworthiness. | [🤗RLAIF-V-12B](https://huggingface.co/HaoyeZhang/RLAIF-V-12B)                                            |
 
+Note: The RLAIF-V 12B weight is uploading and will be available soon.
 
 
 
