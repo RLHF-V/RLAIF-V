@@ -67,7 +67,7 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 
 ## Dataset
 
-We present the [RLAIF-V Dataset](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset), which is an AI generated preference dataset covering diverse range of tasks and domains. This is the largest open-source multimodal preference datasets which contains more than 50K high-quality comparison pairs.
+We present the [RLAIF-V Dataset](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset), which is an AI generated preference dataset covering diverse range of tasks and domains. This open-source multimodal preference datasets contains more than 30K high-quality comparison pairs.
 
 ## Install
 
@@ -95,7 +95,7 @@ pip install en_core_web_trf-3.7.3.tar.gz
 
 | Model           | Description                                                                | Download Link                                                    |
 |-----------------|----------------------------------------------------------------------------|--------------------------------------------------------------|
-| **RLAIF-V-7B**  | Based on LLaVA 1.5 7B, providing efficient inference. | [🤗RLAIF-V-7B](https://huggingface.co/xiaomanlu/RLAIF-V-7B/) | 
+| **RLAIF-V-7B**  | Based on LLaVA 1.5 7B, providing efficient inference. | [🤗RLAIF-V-7B](https://huggingface.co/xiRLAIF-V/RLAIF-V-7B/) | 
 | **RLAIF-V-12B** | Based on OmniLMM-12B, achieving super GPT-4V trustworthiness. | [🤗RLAIF-V-12B](https://huggingface.co/HaoyeZhang/RLAIF-V-12B)                                            |
 
 ## Inference
