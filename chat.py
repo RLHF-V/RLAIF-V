@@ -190,7 +190,7 @@ class RLAIFVChat:
 
 if __name__ == '__main__':
 
-    chat_model = RLAIFVChat('/home/luxiaoman/RLAIF_V/LLaVA15_7B_checkpoints/SelfReward_exp/llava15_7b_DPO-sr_llava15_llava15base_rmllava16_data_1iter_eq4000imgs-sr_llava15_llava15base_rmllava16_data_base_eq4000imgs-1/checkpoints/checkpoint-2171')  # or 'openbmb/OmniLMM-12B'
+    chat_model = RLAIFVChat('XiaomanLu/RLAIF-V-7B')  # or 'openbmb/OmniLMM-12B'
     im_64 = img2base64('./examples/test.jpg')
     msgs = "Describe in detail the people in the picture."
     inputs = {"image": im_64, "question": msgs}

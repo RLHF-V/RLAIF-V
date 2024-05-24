@@ -20,7 +20,7 @@ dependencies = [
     "Pillow==10.3.0", "Requests==2.31.0", "shortuuid==1.0.13",
     "spacy==3.7.2", "timm==0.9.10", "tokenizers==0.14.1", "torch==2.0.1",
     "tqdm==4.66.1", "transformers==4.35.0","wandb==0.15.11",
-    "spacy==3.7.2",
+    "spacy==3.7.2","opencv-python==4.9.0.80".
 ]
 
 [project.optional-dependencies]

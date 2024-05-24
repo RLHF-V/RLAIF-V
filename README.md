@@ -8,6 +8,11 @@
 <a href='https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset'><img src='https://img.shields.io/badge/Dataset-HF-Green'></a>
 <!-- <a href=''><img src='https://img.shields.io/badge/Paper-PDF-orange'></a> -->
 
+<h4 align="center">
+    <p>
+        <a href="README_zh.md">中文</a> | <b>English</b>
+    </p>
+</h4>
 
 </div>
 
@@ -80,7 +85,8 @@ pip install -e .
 ```
 3. Install required spaCy model
 ```bash
-python -m spacy download en-core-web-trf
+wget https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.3/en_core_web_trf-3.7.3.tar.gz
+pip install en_core_web_trf-3.7.3.tar.gz
 ```
 
 
@@ -105,7 +111,7 @@ We provide a simple example to show how to use RLAIF-V.
 
 from chat import RLAIFVChat, img2base64
 
-chat_model = RLAIFVChat('xiaomanlu/RLAIF-V-7B') 
+chat_model = RLAIFVChat('XiaomanLu/RLAIF-V-7B') 
 im_64 = img2base64('./examples/test.jpg')
 msgs = "Why did the car in the picture stop?"
 inputs = {"image": im_64, "question": msgs}
