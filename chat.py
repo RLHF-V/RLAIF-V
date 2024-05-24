@@ -13,7 +13,7 @@ import os
 from omnilmm.model.omnilmm import OmniLMMForCausalLM
 from omnilmm.model.utils import build_transform
 from omnilmm.train.train_utils import omni_preprocess
-
+from transformers import AutoTokenizer, AutoModel
 DEFAULT_IMAGE_TOKEN = "<image>"
 DEFAULT_IMAGE_PATCH_TOKEN = "<im_patch>"
 DEFAULT_IM_START_TOKEN = "<im_start>"
@@ -114,11 +114,15 @@ class RLAIFV12B:
             return response
 
     def chat(self, input):
+        im_64 = img2base64(input['image'])
+        msgs=json.dumps([{"role": "user", "content": input['question']}])
+
         try:
-            image = Image.open(io.BytesIO(base64.b64decode(input['image']))).convert('RGB')
+            image = Image.open(io.BytesIO(base64.b64decode(im_64))).convert('RGB')
         except Exception as e:
             return "Image decode error"
-        msgs = json.loads([{"role": "user", "content": input['question']}])
+
+        msgs = json.loads(msgs)
         input_ids = wrap_question_for_omni_lmm(
             msgs, self.image_token_len, self.tokenizer)['input_ids']
         input_ids = torch.as_tensor(input_ids)
@@ -136,8 +140,7 @@ def img2base64(file_name):
 class RLAIFV7B:
     def __init__(self, model_path) -> None:
         disable_torch_init()
-        model_name = os.path.expanduser(model_path)
-        print(f'Load RLAIFV7B model and tokenizer from {model_name}')
+        model_name='llava-v1.5-7b'
         tokenizer, model, image_processor, context_len = load_pretrained_model(
         model_path, model_base=None,model_name=model_name, device_map={"": 'cuda'})
         self.tokenizer=tokenizer
@@ -146,21 +149,18 @@ class RLAIFV7B:
         self.context_len=context_len
 
     def chat(self, input):
-        try:
-            image = Image.open(io.BytesIO(base64.b64decode(input['image']))).convert('RGB')
-        except Exception as e:
-            return "Image decode error"
-
         msgs = input['question']
         if self.model.config.mm_use_im_start_end:
             msgs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n' + msgs
         else:
             msgs = DEFAULT_IMAGE_TOKEN + '\n' + msgs
 
+        image = Image.open(input['image']).convert('RGB')
         conv = conv_templates["llava_v1"].copy()
         conv.append_message(conv.roles[0], msgs)
         conv.append_message(conv.roles[1], None)
         prompt = conv.get_prompt()
+
         input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).cuda()
         image_tensor = process_images([image], self.image_processor, self.model.config)[0]
         with torch.inference_mode():
@@ -190,9 +190,9 @@ class RLAIFVChat:
 
 if __name__ == '__main__':
 
-    chat_model = RLAIFVChat('XiaomanLu/RLAIF-V-7B')  # or 'openbmb/OmniLMM-12B'
-    im_64 = img2base64('./examples/test.jpg')
+    chat_model = RLAIFVChat('RLAIF-V/RLAIF-V-7B')  # or 'HaoyeZhang/RLAIF-V-12B'
+    image_path="./examples/test.jpeg"
     msgs = "Describe in detail the people in the picture."
-    inputs = {"image": im_64, "question": msgs}
+    inputs = {"image": image_path, "question": msgs}
     answer = chat_model.chat(inputs)
     print(answer)
