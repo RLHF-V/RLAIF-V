@@ -98,10 +98,6 @@ pip install en_core_web_trf-3.7.3.tar.gz
 | **RLAIF-V-7B**  | Based on LLaVA 1.5 7B, providing efficient inference. | [🤗RLAIF-V-7B](https://huggingface.co/xiaomanlu/RLAIF-V-7B/) | 
 | **RLAIF-V-12B** | Based on OmniLMM-12B, achieving super GPT-4V trustworthiness. | [🤗RLAIF-V-12B](https://huggingface.co/HaoyeZhang/RLAIF-V-12B)                                            |
 
-Note: The RLAIF-V 12B weight is uploading and will be available soon.
-
-
-
 ## Inference
 
 We provide a simple example to show how to use RLAIF-V.
@@ -110,11 +106,10 @@ We provide a simple example to show how to use RLAIF-V.
 ```python
 
 from chat import RLAIFVChat, img2base64
-
-chat_model = RLAIFVChat('XiaomanLu/RLAIF-V-7B') 
-im_64 = img2base64('./examples/test.jpg')
-msgs = "Why did the car in the picture stop?"
-inputs = {"image": im_64, "question": msgs}
+chat_model = RLAIFVChat('RLAIF-V/RLAIF-V-7B')  # or 'HaoyeZhang/RLAIF-V-12B'
+image_path="./examples/test.jpeg"
+msgs = "Describe in detail the people in the picture."
+inputs = {"image": image_path, "question": msgs}
 answer = chat_model.chat(inputs)
 print(answer)
 
@@ -224,7 +219,6 @@ bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPEN
 
 ## Acknowledgement <!-- omit in toc -->
 
-- [RLHF-V](https://github.com/RLHF-V/RLHF-V): we refer to the scripts included in the repository.
-- [LLaVA](https://github.com/haotian-liu/LLaVA): the codebase we built upon.
-- [LLaVA-RLHF](https://github.com/llava-rlhf/LLaVA-RLHF): we utilize the MMHal-Bench data and evaluation code constructed by them.
-- [Object Hallucination](https://github.com/LisaAnne/Hallucination): we refer to the CHAIR evaluation code included in the repository.
+- [RLHF-V](https://github.com/RLHF-V/RLHF-V): The codebase we built upon.
+- [LLaVA](https://github.com/haotian-liu/LLaVA): Both the instruction model and labeler model of RLAIF-V-7B.
+- [MiniCPM-V](https://github.com/OpenBMB/MiniCPM-V): Both the instruction model and labeler model of RLAIF-V-12B.
