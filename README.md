@@ -106,6 +106,7 @@ We provide a simple example to show how to use RLAIF-V.
 ```python
 
 from chat import RLAIFVChat, img2base64
+
 chat_model = RLAIFVChat('RLAIF-V/RLAIF-V-7B')  # or 'HaoyeZhang/RLAIF-V-12B'
 image_path="./examples/test.jpeg"
 msgs = "Describe in detail the people in the picture."
