@@ -24,7 +24,7 @@ def init_omni_lmm(model_path):
     torch.backends.cuda.matmul.allow_tf32 = True
     disable_torch_init()
     model_name = os.path.expanduser(model_path)
-    print(f'Load omni_lmm model and tokenizer from {model_name}')
+    print(f'Load RLAIF-V-12B model and tokenizer from {model_name}')
     tokenizer = AutoTokenizer.from_pretrained(
         model_name, model_max_length=2048)
 
@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
     chat_model = RLAIFVChat('RLAIF-V/RLAIF-V-7B')  # or 'HaoyeZhang/RLAIF-V-12B'
     image_path="./examples/test.jpeg"
-    msgs = "Describe in detail the people in the picture."
+    msgs = "Why did the car in the picture stop?"
     inputs = {"image": image_path, "question": msgs}
     answer = chat_model.chat(inputs)
     print(answer)
