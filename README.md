@@ -63,7 +63,7 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 - [Train](#train)
 - [Evaluation](#evaluation)
   - [Object HalBench](#object-halbench)
-  - [MMHalBench](#mmhalbench)
+  - [MMHal Bench](#mmhal-bench)
 
 ## Dataset
 
@@ -193,7 +193,7 @@ bash ./script/eval_rlaif_objhal.sh ./RLAIF-V_weight ./results/RLAIF-V ./coco2014
 ```
 
 
-### MMHalBench
+### MMHal Bench
 
 1. Prepare MMHal Data
 
