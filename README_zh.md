@@ -167,7 +167,7 @@ bash ./script/train/llava15_train.sh
 
 1. 准备 COCO2014 注释
 
-Object HalBench 的评估依赖于 COCO2014 数据集中的标题和分割注释。请首先从 COCO 数据集的官方网站下载 COCO2014 数据集。
+Object HalBench 的评估依赖于 COCO2014 数据集中的字幕和分割注释。请首先从 COCO 数据集的官方网站下载 COCO2014 数据集。
 
 ```bash
 mkdir coco2014
