@@ -19,7 +19,8 @@
 
 ## 🎊更新日志 <!-- omit in toc -->
 
-- [2024.05.20] 我们开源了RLAIF-V的代码，权重和数据！
+- [2024.05.25] RLAIF-V 现在支持使用 parquet 格式的 RLAIF-V 数据集进行训练了，欢迎试用！
+- [2024.05.20] 我们开源了 RLAIF-V 的代码，权重和数据！
 
 
 ## 📜简介 <!-- omit in toc -->
@@ -151,7 +152,7 @@ In the picture, a car stopped on the road due to the presence of a sheep on the 
 
 1. 数据准备
 
-下载 [RLAIF-V Dataset](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset) 到 `train/data` 目录下。如有需要，您可以在 [第101行](muffin/data/data_processors.py#L101) 修改数据集路径。
+下载 [RLAIF-V Dataset](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset) 到 `RLAIF-V-Dataset` 目录下。如有需要，您可以在 [第101行](muffin/data/data_processors.py#L101) 修改数据集路径。
 
 2. 开始训练
 3. 运行以下命令开始训练。

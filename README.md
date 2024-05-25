@@ -19,6 +19,7 @@
 
 ## 🎊News <!-- omit in toc -->
 
+- [2024.05.25] RLAIF-V now supports training with RLAIF-V-Dataset in parquet format!
 - [2024.05.20] We open-source the code, weights and data of RLAIF-V!
 
 
@@ -151,7 +152,7 @@ In the picture, a car stopped on the road due to the presence of a sheep on the 
 
 1. Prepare data
 
-Download [RLAIF-V Dataset](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset) and put it under `train/data`
+Download [RLAIF-V Dataset](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset) and put it under `RLAIF-V-Dataset/`
 
 If needed, you can modify your data set path [here](muffin/data/data_processors.py#L101) at Line 101.
 
