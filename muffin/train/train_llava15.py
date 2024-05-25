@@ -116,7 +116,6 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer,
 def create_multi_data_source_dataset(data_source_names, data_source_weights, shuffle=False):
     ds_list = []
     for name in data_source_names:
-        print(name)
         ds = SingleDataSourceDataset(name, *register_data_path[name](), shuffle=shuffle)
         ds_list.append(ds)
     ds = MultiDataSourceDataset(ds_list, data_source_weights)

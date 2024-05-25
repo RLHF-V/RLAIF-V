@@ -5,13 +5,13 @@ import random
 import numpy
 import torch
 import base64
-
+import pandas
 import os.path as op
 import torch.utils.data as torch_data
 
 from PIL import Image
 from typing import List, Iterator
-from muffin.data.tsv_file import TSVFile
+from muffin.data.parquet_file import ParquetFile
 from torch.utils.data.sampler import Sampler
 from muffin.data.data_processors import register_data_processor
 
@@ -42,20 +42,21 @@ class ChunckedRandomSampler(Sampler[int]):
 
 
 class SingleDataSourceDataset(torch_data.Dataset):
-    def __init__(self, ds_name, data_dir, tsv_filenames: List[str], intent='sft', shuffle=False) -> None:
+    def __init__(self, ds_name, data_dir, parquet_filenames: List[str], intent='sft', shuffle=False) -> None:
         super().__init__()
 
         self.data_dir = data_dir
-        self.filenames = tsv_filenames
+        self.filenames = parquet_filenames
         self.ds_name = ds_name
 
         self.sizes = []
         for filename in self.filenames:
             try:
-                size = int(filename[:-4].split('-')[-1])
+                parquet = pandas.read_parquet(op.join(data_dir,filename))
+                size = parquet.shape[0]
             except:
                 raise ValueError(
-                    f'TSV Data File {filename} is not valid, last component separated by `-` must be the number of sample in this file')
+                    f'Parquet Data File {filename} is not valid, last component separated by `-` must be the number of sample in this file')
             self.sizes.append(size)
 
         self.file_border_index = []
@@ -136,7 +137,7 @@ class SingleDataSourceDataset(torch_data.Dataset):
             file = self.files[file_idx]
 
         assert isinstance(
-            file, TSVFile), f'Expecting TSVFile but get {file} as {type(file)}'
+            file, ParquetFile), f'Expecting TSVFile but get {file} as {type(file)}'
 
         # tsv line as tuple
         sample = file[row_idx]
@@ -155,7 +156,7 @@ class SingleDataSourceDataset(torch_data.Dataset):
 
     def prepare_file(self, idx):
         filename = self.filenames[idx]
-        file = TSVFile(op.join(self.data_dir, filename))
+        file = ParquetFile(op.join(self.data_dir, filename))
         self.files[idx] = file
 
 

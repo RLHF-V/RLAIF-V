@@ -82,7 +82,7 @@ def wrap_caption_generation_single_turn_conv(out):
     return wrap_generation_single_turn_conv(out, caption_instruction_templates)
 
 
-def gather_data_files_by_glob(root: str, pattern='*.tsv'):
+def gather_data_files_by_glob(root: str, pattern='*.parquet'):
     filenames = []
 
     for fullpath in glob.glob(f'{root}/{pattern}'):
@@ -98,5 +98,5 @@ def dpo_data_processor(*args, **kwargs):
 
 @register_data_path('sr_llava15_llava15base_rmllava16_data_base_eq4000imgs')
 def dpo_data_path():
-    data_dir = "data/train/"
-    return gather_data_files_by_glob(data_dir, pattern='sr_omni_merge_diff1_samp2_llava15_checkby_llava16_2000detail#2500qaimgs_filtershort_0_logp-5998_sample_img88.9%-5342.tsv')
+    data_dir = "RLAIF-V-Dataset/"
+    return gather_data_files_by_glob(data_dir, pattern='*.parquet')
