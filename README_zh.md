@@ -63,7 +63,7 @@
 - [训练](#训练)
 - [评估](#评估)
   - [Object HalBench](#object-halbench)
-  - [MMHalBench](#mmhalbench)
+  - [MMHal Bench](#mmhal-bench)
 
 ## 数据集
 
@@ -189,7 +189,7 @@ bash ./script/eval_rlaif_objhal.sh ./RLAIF-V_weight ./results/RLAIF-V ./coco2014
 ```
 
 
-### MMHalBench
+### MMHal Bench
 
 1. 准备 MMHal 数据
 
