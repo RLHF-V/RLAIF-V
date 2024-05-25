@@ -95,8 +95,8 @@ pip install en_core_web_trf-3.7.3.tar.gz
 
 | Model           | Description                                                                | Download Link                                                    |
 |-----------------|----------------------------------------------------------------------------|--------------------------------------------------------------|
-| **RLAIF-V-7B**  | Based on LLaVA 1.5 7B, providing efficient inference. | [🤗RLAIF-V-7B](https://huggingface.co/xiRLAIF-V/RLAIF-V-7B/) | 
-| **RLAIF-V-12B** | Based on OmniLMM-12B, achieving super GPT-4V trustworthiness. | [🤗RLAIF-V-12B](https://huggingface.co/HaoyeZhang/RLAIF-V-12B)                                            |
+| **RLAIF-V-7B**  | Based on LLaVA 1.5 7B, providing efficient inference. | [🤗RLAIF-V-7B](https://huggingface.co/RLAIF-V/RLAIF-V-7B) | 
+| **RLAIF-V-12B** | Based on OmniLMM-12B, achieving super GPT-4V trustworthiness. | [🤗RLAIF-V-12B](https://huggingface.co/HaoyeZhang/RLAIF-V-12B)           |
 
 ## Inference
 
@@ -221,5 +221,5 @@ bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPEN
 ## Acknowledgement <!-- omit in toc -->
 
 - [RLHF-V](https://github.com/RLHF-V/RLHF-V): The codebase we built upon.
-- [LLaVA](https://github.com/haotian-liu/LLaVA): Both the instruction model and labeler model of RLAIF-V-7B.
-- [MiniCPM-V](https://github.com/OpenBMB/MiniCPM-V): Both the instruction model and labeler model of RLAIF-V-12B.
+- [LLaVA](https://github.com/haotian-liu/LLaVA): The instruction model and labeler model of RLAIF-V-7B.
+- [MiniCPM-V](https://github.com/OpenBMB/MiniCPM-V): The instruction model and labeler model of RLAIF-V-12B.
