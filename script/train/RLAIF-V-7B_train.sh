@@ -3,7 +3,7 @@ task_name=llava15_7b_DPO
 exp_name=sr_llava15_llava15base_rmllava16_data_1iter_eq4000imgs
 sft_data=sr_llava15_llava15base_rmllava16_data_base_eq4000imgs
 
-deepspeed ./muffin/train/train_llava15.py \
+/home/jeeves/miniconda3/envs/rlaifv/bin/deepspeed ./muffin/train/train_llava15.py \
     --deepspeed ./script/zero3.json  \
     --model_name_or_path liuhaotian/llava-v1.5-7b \
     --image_folder not_used \
