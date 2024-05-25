@@ -95,7 +95,7 @@ pip install en_core_web_trf-3.7.3.tar.gz
 
 | 模型           | 描述                                                                | 下载链接                                                    |
 |-----------------|----------------------------------------------------------------------------|--------------------------------------------------------------|
-| **RLAIF-V-7B**  | 基于 LLaVA 1.5 7，提供高效推理。 | [🤗RLAIF-V-7B](https://huggingface.co/xiaomanlu/RLAIF-V-7B/) | 
+| **RLAIF-V-7B**  | 基于 LLaVA 1.5 7，提供高效推理。 | [🤗RLAIF-V-7B](https://huggingface.co/RLAIF-V/RLAIF-V-7B) | 
 | **RLAIF-V-12B** | 基于 OmniLMM-12B，实现超越 GPT-4V 的可信度。 | [🤗RLAIF-V-12B](https://huggingface.co/HaoyeZhang/RLAIF-V-12B)    |                                        
 
 
