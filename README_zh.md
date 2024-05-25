@@ -30,7 +30,7 @@
   
 <table align="center">
     <p align="center">
-      <img src="examples/introduction1.png" width="80%" alt="introduction1" />
+      <img src="examples/introduction1.jpg" width="80%" alt="introduction1" />
     </p>
 </table>
 
@@ -40,7 +40,7 @@
 
 <table align="center">
     <p align="center">
-      <img src="examples/introduction3.png" width="80%" alt="introduction3" />
+      <img src="examples/introduction3.jpg" width="80%" alt="introduction3" />
     </p>
 </table>
 
@@ -49,7 +49,7 @@
 
 <table align="center">
     <p align="center">
-      <img src="examples/introduction2.png" width="80%" alt="introduction2" />
+      <img src="examples/introduction2.jpg" width="80%" alt="introduction2" />
     </p>
 </table>
 
