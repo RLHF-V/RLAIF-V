@@ -3,7 +3,7 @@
 
 <img src="examples/logo.png" width="30%" alt="RLAIF-V" />
 
-**通过开源人工智能反馈对齐 MLLM，实现超级 GPT-4V 可信性**
+**通过开源反馈实现超越 GPT-4V 的可信度**
 
 <a href='https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset'><img src='https://img.shields.io/badge/Dataset-HF-Green'></a>
 <!-- <a href=''><img src='https://img.shields.io/badge/Paper-PDF-orange'></a> -->
@@ -17,16 +17,16 @@
 </div>
 
 
-## 🎊News <!-- omit in toc -->
+## 🎊更新日志 <!-- omit in toc -->
 
 - [2024.05.20] 我们开源了RLAIF-V的代码，权重和数据！
 
 
 ## 📜简介 <!-- omit in toc -->
 
-我们提出了一个新颖的框架：RLAIF-V，它在完全开源的范例中对齐 MLLM，以实现超级 GPT-4V 可信性。 RLAIF-V 从两个关键角度最大限度地利用了开源反馈，包括高质量反馈数据和在线反馈学习算法。RLAIF-V 的显著特点包括：
+我们提出了一个新颖的框架RLAIF-V，它在完全开源的范式中对齐多模态大模型，实现了超越 GPT-4V 的可信度。 RLAIF-V 从两个关键角度最大限度地利用了开源反馈，包括高质量反馈数据和在线反馈学习算法。RLAIF-V 的显著特点包括：
 
-* 💪 **通过开源反馈实现超级 GPT-4V 可信性。** 通过从开源人工智能反馈中学习，RLAIF-V 12B 在生成任务和判别任务中都实现了超 GPT-4V 可信度。
+* 💪 **通过开源反馈实现超越 GPT-4V 的可信度。** 通过从开源反馈中学习，RLAIF-V 12B 在生成任务和判别任务中都实现了超越 GPT-4V 的可信度。
   
 <table align="center">
     <p align="center">
@@ -36,7 +36,7 @@
 
 
 
-* 🤝 **高质量的通用反馈数据。** RLAIF-V 12B 首次迭代时使用的反馈数据**有效地减少了不同 MLLM 的幻觉**。
+* 🤝 **高质量的通用反馈数据。** RLAIF-V 使用的反馈数据可以**有效减少不同多模态大模型的幻觉**。
 
 <table align="center">
     <p align="center">
@@ -45,7 +45,7 @@
 </table>
 
 
-* ⚡️ **迭代对齐的高效反馈学习。** 与非迭代法相比，RLAIF-V 表现出**更高的学习效率和更好的性能**。
+* ⚡️ **迭代对齐的高效反馈学习。** 与未采用迭代的方法相比，RLAIF-V 表现出**更高的学习效率和更好的性能**。
 
 <table align="center">
     <p align="center">
@@ -63,11 +63,11 @@
 - [训练](#训练)
 - [评估](#评估)
   - [Object HalBench](#object-halbench)
-  - [MMHalBench](#mmhalbench)
+  - [MMHal Bench](#mmhal-bench)
 
 ## 数据集
 
-我们介绍了[RLAIF-V 数据集](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset)，这是一个由 AI 生成的偏好数据集，涵盖各种任务和领域。这是最大的开源多模态偏好数据集，包含 5 万多个高质量对比对。
+我们提供了[RLAIF-V 数据集](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset)，这是一个由 AI 生成的偏好数据集，涵盖各种任务和领域。这一开源多模态偏好数据集包含3万多个高质量对比对。
 
 ## 安装
 
@@ -96,7 +96,7 @@ pip install en_core_web_trf-3.7.3.tar.gz
 | 模型           | 描述                                                                | 下载链接                                                    |
 |-----------------|----------------------------------------------------------------------------|--------------------------------------------------------------|
 | **RLAIF-V-7B**  | 基于 LLaVA 1.5 7，提供高效推理。 | [🤗RLAIF-V-7B](https://huggingface.co/xiaomanlu/RLAIF-V-7B/) | 
-| **RLAIF-V-12B** | 基于 OmniLMM-12B，实现超级 GPT-4V 可信性。 | [🤗RLAIF-V-12B](https://huggingface.co/HaoyeZhang/RLAIF-V-12B)    |                                        
+| **RLAIF-V-12B** | 基于 OmniLMM-12B，实现超越 GPT-4V 的可信度。 | [🤗RLAIF-V-12B](https://huggingface.co/HaoyeZhang/RLAIF-V-12B)    |                                        
 
 
 ## 推理
@@ -107,10 +107,10 @@ pip install en_core_web_trf-3.7.3.tar.gz
 
 from chat import RLAIFVChat, img2base64
 
-chat_model = RLAIFVChat('XiaomanLu/RLAIF-V-7B') 
-im_64 = img2base64('./examples/test.jpg')
-msgs = "Why did the car in the picture stop?"
-inputs = {"image": im_64, "question": msgs}
+chat_model = RLAIFVChat('RLAIF-V/RLAIF-V-7B')  # or 'HaoyeZhang/RLAIF-V-12B'
+image_path="./examples/test.jpeg"
+msgs = "Describe in detail the people in the picture."
+inputs = {"image": image_path, "question": msgs}
 answer = chat_model.chat(inputs)
 print(answer)
 
@@ -167,7 +167,7 @@ bash ./script/train/llava15_train.sh
 
 1. 准备 COCO2014 注释
 
-Object HalBench 的评估依赖于 COCO2014 数据集中的标题和分割注释。请首先从 COCO 数据集的官方网站下载 COCO2014 数据集。
+Object HalBench 的评估依赖于 COCO2014 数据集中的字幕和分割注释。请首先从 COCO 数据集的官方网站下载 COCO2014 数据集。
 
 ```bash
 mkdir coco2014
@@ -189,7 +189,7 @@ bash ./script/eval_rlaif_objhal.sh ./RLAIF-V_weight ./results/RLAIF-V ./coco2014
 ```
 
 
-### MMHalBench
+### MMHal Bench
 
 1. 准备 MMHal 数据
 
@@ -216,7 +216,6 @@ bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPEN
 
 ## 致谢 <!-- omit in toc -->
 
-- [RLHF-V](https://github.com/RLHF-V/RLHF-V)：我们参考了该仓库中的脚本。
-- [LLaVA](https://github.com/haotian-liu/LLaVA)：我们基于的代码库。
-- [LLaVA-RLHF](https://github.com/llava-rlhf/LLaVA-RLHF)：我们使用了 MMHal-Bench 数据和由他们构建的评估代码。
-- [Object Hallucination](https://github.com/LisaAnne/Hallucination)：我们参考了该仓库中的 CHAIR 评估代码。
+- [RLHF-V](https://github.com/RLHF-V/RLHF-V): 我们基于的代码库。
+- [LLaVA](https://github.com/haotian-liu/LLaVA): RLAIF-V-7B的指令模型和标注模型。 
+- [MiniCPM-V](https://github.com/OpenBMB/MiniCPM-V): RLAIF-V-12B的指令模型和标注模型。

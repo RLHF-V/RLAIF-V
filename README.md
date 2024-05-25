@@ -63,7 +63,7 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 - [Train](#train)
 - [Evaluation](#evaluation)
   - [Object HalBench](#object-halbench)
-  - [MMHalBench](#mmhalbench)
+  - [MMHal Bench](#mmhal-bench)
 
 ## Dataset
 
@@ -106,6 +106,7 @@ We provide a simple example to show how to use RLAIF-V.
 ```python
 
 from chat import RLAIFVChat, img2base64
+
 chat_model = RLAIFVChat('RLAIF-V/RLAIF-V-7B')  # or 'HaoyeZhang/RLAIF-V-12B'
 image_path="./examples/test.jpeg"
 msgs = "Describe in detail the people in the picture."
@@ -192,7 +193,7 @@ bash ./script/eval_rlaif_objhal.sh ./RLAIF-V_weight ./results/RLAIF-V ./coco2014
 ```
 
 
-### MMHalBench
+### MMHal Bench
 
 1. Prepare MMHal Data
 
