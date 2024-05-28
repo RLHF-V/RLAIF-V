@@ -50,7 +50,7 @@
 
 <table align="center">
     <p align="center">
-      <img src="examples/introduction2.jpg" width="80%" alt="introduction2" />
+      <img src="examples/introduction2.png" width="80%" alt="introduction2" />
     </p>
 </table>
 
