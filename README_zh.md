@@ -25,7 +25,7 @@
 
 ## 📜 简介 <!-- omit in toc -->
 
-我们提出了一个新颖的框架RLAIF-V，它在完全开源的范式中对齐多模态大模型，实现了超越 GPT-4V 的可信度。 RLAIF-V 从两个关键角度最大限度地利用了开源反馈，包括高质量反馈数据和在线反馈学习算法。RLAIF-V 的显著特点包括：
+我们提出了 RLAIF-V 框架，在完全开源的范式中对齐多模态大模型，并实现了超越 GPT-4V 的可信度。 RLAIF-V 从构造高质量反馈数据和应用在线反馈学习算法这两个关键角度最大限度地利用了开源反馈，其的显著特点包括：
 
 * 💪 **通过开源反馈实现超越 GPT-4V 的可信度。** 通过从开源反馈中学习，RLAIF-V 12B 在生成任务和判别任务中都实现了超越 GPT-4V 的可信度。
   
@@ -97,8 +97,8 @@ pip install en_core_web_trf-3.7.3.tar.gz
 
 | 模型           | 描述                                                                | 下载链接                                                    |
 |-----------------|----------------------------------------------------------------------------|--------------------------------------------------------------|
-| **RLAIF-V-7B**  | 基于 LLaVA 1.5 7，提供高效推理。 | [🤗RLAIF-V-7B](https://huggingface.co/RLAIF-V/RLAIF-V-7B) | 
-| **RLAIF-V-12B** | 基于 OmniLMM-12B，实现超越 GPT-4V 的可信度。 | [🤗RLAIF-V-12B](https://huggingface.co/HaoyeZhang/RLAIF-V-12B)    |                                        
+| **RLAIF-V-7B**  | 幻觉率最低的 LLaVA 1.5 版本 | [🤗RLAIF-V-7B](https://huggingface.co/openBMB/RLAIF-V-7B) | 
+| **RLAIF-V-12B** | 基于 OmniLMM-12B，实现超越 GPT-4V 的可信度。 | [🤗RLAIF-V-12B](https://huggingface.co/openBMB/RLAIF-V-12B)    |                                        
 
 
 ## 推理
