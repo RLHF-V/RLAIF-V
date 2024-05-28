@@ -227,10 +227,17 @@ bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPEN
 如果您觉得我们模型/数据/代码/论文有帮助，请给我们 ⭐ 和 引用 📝，感谢！
 
 ```bibtex
+@article{yu2023rlhf,
+  title={Rlhf-v: Towards trustworthy mllms via behavior alignment from fine-grained correctional human feedback},
+  author={Yu, Tianyu and Yao, Yuan and Zhang, Haoye and He, Taiwen and Han, Yifeng and Cui, Ganqu and Hu, Jinyi and Liu, Zhiyuan and Zheng, Hai-Tao and Sun, Maosong and others},
+  journal={arXiv preprint arXiv:2312.00849},
+  year={2023}
+}
+
 @article{yu2024rlaifv,
-      title={RLAIF-V: Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness}, 
-      author={Tianyu Yu and Haoye Zhang and Yuan Yao and Yunkai Dang and Da Chen and Xiaoman Lu and Ganqu Cui and Taiwen He and Zhiyuan Liu and Tat-Seng Chua and Maosong Sun},
-      journal={arXiv preprint arXiv:2405.17220},
-      year={2024},
+  title={RLAIF-V: Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness}, 
+  author={Tianyu Yu and Haoye Zhang and Yuan Yao and Yunkai Dang and Da Chen and Xiaoman Lu and Ganqu Cui and Taiwen He and Zhiyuan Liu and Tat-Seng Chua and Maosong Sun},
+  journal={arXiv preprint arXiv:2405.17220},
+  year={2024},
 }
 ```
