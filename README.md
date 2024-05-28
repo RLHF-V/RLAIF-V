@@ -100,8 +100,8 @@ pip install en_core_web_trf-3.7.3.tar.gz
 
 | Model           | Description    | Download                                                    |
 |-----------------|--------------------|:-:|
-| **RLAIF-V-7B**  | The most trustworthy variant on LLaVA 1.5 | [🤗](https://huggingface.co/openBMB/RLAIF-V-7B) | 
-| **RLAIF-V-12B** | Based on OmniLMM-12B, achieving super GPT-4V trustworthiness. | [🤗](https://huggingface.co/openBMB/RLAIF-V-12B)           |
+| RLAIF-V 7B  | The most trustworthy variant on LLaVA 1.5 | [🤗](https://huggingface.co/openBMB/RLAIF-V-7B) | 
+| RLAIF-V 12B | Based on OmniLMM-12B, achieving super GPT-4V trustworthiness. | [🤗](https://huggingface.co/openBMB/RLAIF-V-12B)           |
 
 ## Inference
 

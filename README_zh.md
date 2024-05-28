@@ -97,8 +97,8 @@ pip install en_core_web_trf-3.7.3.tar.gz
 
 | 模型|介绍     | 下载  |
 |-----------------|------------------|:-------------:|
-| **RLAIF-V-7B**  | 幻觉率最低的 LLaVA 1.5 版本 | [🤗](https://huggingface.co/openBMB/RLAIF-V-7B) | 
-| **RLAIF-V-12B** | 基于 OmniLMM-12B，实现超越 GPT-4V 的可信度。 | [🤗](https://huggingface.co/openBMB/RLAIF-V-12B)    |                                        
+| RLAIF-V 7B   | 幻觉率最低的 LLaVA 1.5 版本 | [🤗](https://huggingface.co/openBMB/RLAIF-V-7B) | 
+| RLAIF-V 12B | 基于 OmniLMM-12B，实现超越 GPT-4V 的可信度。 | [🤗](https://huggingface.co/openBMB/RLAIF-V-12B)    |                                        
 
 
 ## 推理
