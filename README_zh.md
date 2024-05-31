@@ -28,7 +28,7 @@
 我们提出了 RLAIF-V 框架，在完全开源的范式中对齐多模态大模型，并实现了超越 GPT-4V 的可信度。 RLAIF-V 从构造高质量反馈数据和应用在线反馈学习算法这两个关键角度最大限度地利用了开源反馈，其的显著特点包括：
 
 * 💪 **通过开源反馈实现超越 GPT-4V 的可信度。** 通过从开源反馈中学习，RLAIF-V 12B 在生成任务和判别任务中都实现了超越 GPT-4V 的可信度。
-  
+
 <table align="center">
     <p align="center">
       <img src="examples/introduction1.jpg" width="80%" alt="introduction1" />
@@ -97,8 +97,8 @@ pip install en_core_web_trf-3.7.3.tar.gz
 
 | 模型|介绍     | 下载  |
 |-----------------|------------------|:-------------:|
-| RLAIF-V 7B   | 幻觉率最低的 LLaVA 1.5 版本 | [🤗](https://huggingface.co/openBMB/RLAIF-V-7B) | 
-| RLAIF-V 12B | 基于 OmniLMM-12B，实现超越 GPT-4V 的可信度。 | [🤗](https://huggingface.co/openBMB/RLAIF-V-12B)    |                                        
+| RLAIF-V 7B   | 幻觉率最低的 LLaVA 1.5 版本 | [🤗](https://huggingface.co/openBMB/RLAIF-V-7B) |
+| RLAIF-V 12B | 基于 OmniLMM-12B，实现超越 GPT-4V 的可信度。 | [🤗](https://huggingface.co/openBMB/RLAIF-V-12B)    |
 
 
 ## 推理
@@ -136,7 +136,7 @@ python chat.py
 <img src="examples/test.jpeg" width="500px">
 </div>
 
-**问题：** 
+**问题：**
 
 Why did the car in the picture stop?
 
@@ -153,10 +153,12 @@ In the picture, a car stopped on the road due to the presence of a sheep on the 
 
 1. 数据准备
 
-下载 [RLAIF-V Dataset](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset) 到 `train/data` 目录下。如有需要，您可以在 [第101行](muffin/data/data_processors.py#L101) 修改数据集路径。
+如果您可以访问huggingface数据集，您可以跳过这一步，我们将自动下载[RLAIF-V Dataset(https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset)。
+
+如果您已经下载了数据集，您可以在[第38行](muffin/data/datassets.py#L38)，将`openbmb/RLAIF-V-Dataset`替换为您的数据集路径。
 
 2. 开始训练
-3. 运行以下命令开始训练。
+运行以下命令开始训练。
 
 ```bash
 bash ./script/train/llava15_train.sh
@@ -198,14 +200,14 @@ bash ./script/eval_rlaif_objhal.sh ./RLAIF-V_weight ./results/RLAIF-V ./coco2014
 请在[此处](https://drive.google.com/file/d/1mQyAbeGgRyiVV6qjVkUI1uY_g9E-bDTH/view?usp=sharing)下载 MMHal 评估数据，并将文件保存在`eval/data`中。
 
 2. 运行以下脚本，生成、评估和汇总 MMHal Bench 的结果
-   
+
 ```bash
 # cd RLAIF-V
 
 bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPENAI_API_KEY}
 ```
 
- 
+
 ## 许可证 <!-- omit in toc -->
 
 
@@ -219,7 +221,7 @@ bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPEN
 ## 致谢 <!-- omit in toc -->
 
 - [RLHF-V](https://github.com/RLHF-V/RLHF-V): 本项目基于的代码库。
-- [LLaVA](https://github.com/haotian-liu/LLaVA): RLAIF-V-7B的指令模型和标注模型。 
+- [LLaVA](https://github.com/haotian-liu/LLaVA): RLAIF-V-7B的指令模型和标注模型。
 - [MiniCPM-V](https://github.com/OpenBMB/MiniCPM-V): RLAIF-V-12B的指令模型和标注模型。
 
 ## 引用
@@ -235,7 +237,7 @@ bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPEN
 }
 
 @article{yu2024rlaifv,
-  title={RLAIF-V: Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness}, 
+  title={RLAIF-V: Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness},
   author={Yu, Tianyu and Zhang, Haoye and Yao, Yuan and Dang, Yunkai and Chen, Da and Lu, Xiaoman and Cui, Ganqu and He, Taiwen and Liu, Zhiyuan and Chua, Tat-Seng and Sun, Maosong},
   journal={arXiv preprint arXiv:2405.17220},
   year={2024},

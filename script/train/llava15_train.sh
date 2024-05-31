@@ -1,11 +1,12 @@
+export PYTHONPATH=$PYTHONPATH:`realpath .`
 
 task_name=llava15_7b_DPO
-exp_name=sr_llava15_llava15base_rmllava16_data_1iter_eq4000imgs
-sft_data=sr_llava15_llava15base_rmllava16_data_base_eq4000imgs
+exp_name=llava15_rlaifv
 
 deepspeed ./muffin/train/train_llava15.py \
-    --deepspeed ./script/zero3.json  \
+    --deepspeed ./script/zero2.json  \
     --model_name_or_path liuhaotian/llava-v1.5-7b \
+    --data_dir ./RLAIF-V-Dataset/ \
     --image_folder not_used \
     --vision_tower openai/clip-vit-large-patch14-336 \
     --mm_use_im_start_end False \
@@ -24,7 +25,7 @@ deepspeed ./muffin/train/train_llava15.py \
     --save_strategy "steps" \
     --save_steps 167 \
     --save_total_limit 50 \
-    --data_source_names  $sft_data \
+    --data_source_names '' \
     --data_source_weights 1 \
     --max_steps 2672 \
     --learning_rate 5e-7 \
@@ -44,6 +45,4 @@ deepspeed ./muffin/train/train_llava15.py \
     --dpo_use_average False \
     --dpo_token_weighted False \
     --dpo_token_weight 1.0 \
-    --dpo_beta 0.1 \
-    # --eval_steps 50 \
-    # --eval_data_source_names RM_Bench_clean_diff1#RM_Bench_clean_diff2#RM_Bench_clean_diff3
+    --dpo_beta 0.1

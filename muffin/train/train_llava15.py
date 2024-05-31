@@ -2,21 +2,20 @@ import os
 import sys
 from llava.model import *
 import gc
-import timm
 import torch
 import random
 import logging
+import copy
 import pathlib
 import getpass
 import transformers
-
 from typing import Dict, Optional, Sequence, List
 from dataclasses import dataclass, field
 from torch.utils.data import Dataset
 
 from utils.utils import is_main_process, get_rank
 from muffin.train.trainers import LLaVA15DPOTrainer
-from muffin.data.datasets import SingleDataSourceDataset, MultiDataSourceDataset
+from muffin.data.datasets import SingleDataSourceDataset, MultiDataSourceDataset,RLAIFVDataset
 from muffin.data.data_processors import register_data_path
 from muffin.train.train_utils import encode_multimodal_preference_sample, preprocess_v1
 
@@ -58,7 +57,7 @@ class DataArguments:
     data_source_names: str = 'unimm-chat'
     data_source_weights: str = '100'
     eval_data_source_names: Optional[str] = field(default=None)
-
+    data_dir: str = './RLAIF-V-Dataset/'
     kto_win_data_source_names: str = '100'
     kto_win_data_source_weights: str = '100'
     kto_rej_data_source_names : str = '100'
@@ -116,7 +115,6 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer,
 def create_multi_data_source_dataset(data_source_names, data_source_weights, shuffle=False):
     ds_list = []
     for name in data_source_names:
-        print(name)
         ds = SingleDataSourceDataset(name, *register_data_path[name](), shuffle=shuffle)
         ds_list.append(ds)
     ds = MultiDataSourceDataset(ds_list, data_source_weights)
@@ -126,12 +124,13 @@ def create_multi_data_source_dataset(data_source_names, data_source_weights, shu
 class DPODataset(Dataset):
     def __init__(self,
                  tokenizer: transformers.PreTrainedTokenizer,
-                 multimodal_cfg: dict):
+                 data_dir: str,
+                 multimodal_cfg: dict,
+                 reference_model = None):
         super(DPODataset, self).__init__()
 
         self.tokenizer = tokenizer
-        self.list_data_dict = create_multi_data_source_dataset(
-            multimodal_cfg['data_source_names'], multimodal_cfg['data_source_weights'], shuffle=multimodal_cfg['shuffle_data'])
+        self.list_data_dict = RLAIFVDataset(data_dir, reference_model, tokenizer,multimodal_cfg['image_token_len'], multimodal_cfg['image_processor'], multimodal_cfg['use_im_start_end'], is_llava15=True)
         self.multimodal_cfg = multimodal_cfg
         self.multimodal_cfg['keep_image_tag'] = True
 
@@ -146,8 +145,9 @@ class DPODataset(Dataset):
         return rej_data_dict, win_data_dict
 
 
-def make_dpo_data_module(tokenizer, data_args):
+def make_dpo_data_module(tokenizer, data_args,reference_model):
     train_dataset = DPODataset(tokenizer=tokenizer,
+                               data_dir=data_args.data_dir,
                                multimodal_cfg=dict(
                                    is_multimodal=data_args.is_multimodal,
                                    image_token_len=data_args.image_token_len,
@@ -161,7 +161,8 @@ def make_dpo_data_module(tokenizer, data_args):
                                        data_args, 'data_source_names'),
                                    data_source_weights=getattr(data_args, 'data_source_weights'),
                                    shuffle_data=data_args.shuffle_data
-                                   ))
+                                   ),
+                               reference_model=reference_model)
     print(f'Train data size is {len(train_dataset)}', flush=True)
     data_collator = DataCollatorForDPODataset(
         tokenizer=tokenizer, beta=data_args.dpo_beta, mod_token_weight=data_args.dpo_token_weight)
@@ -170,6 +171,7 @@ def make_dpo_data_module(tokenizer, data_args):
         eval_datasets = {}
         for name in data_args.eval_data_source_names:
             eval_dataset = DPODataset(tokenizer=tokenizer,
+                                      data_dir=data_args.data_dir,
                                       multimodal_cfg=dict(
                                           is_multimodal=data_args.is_multimodal,
                                           image_token_len=data_args.image_token_len,
@@ -182,7 +184,8 @@ def make_dpo_data_module(tokenizer, data_args):
                                           data_source_names=[name],
                                           data_source_weights=[1],
                                            shuffle_data=False
-                                          ))
+                                          ),
+                                      reference_model=reference_model)
             eval_datasets[name] = eval_dataset
     else:
         eval_datasets = None
@@ -273,7 +276,7 @@ def init_model(model_args, data_args, training_args, attn_implementation):
     if training_args.task == 'LM':
         raise NotImplementedError
     elif training_args.task == 'DPO':
-        data_module = make_dpo_data_module(tokenizer, data_args=data_args)
+        data_module = make_dpo_data_module(tokenizer, data_args=data_args, reference_model=copy.deepcopy(model).cuda())
 
     return model.cuda(), data_module, tokenizer
 

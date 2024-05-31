@@ -65,7 +65,7 @@ def SFT_collator_fn(instances, pad_token_id):
     batch = dict(
         input_ids=input_ids,
         labels=labels,
-        # attention_mask=input_ids.ne(pad_token_id),
+        attention_mask=input_ids.ne(pad_token_id),
     )
 
     images = [instance['image']
@@ -243,7 +243,7 @@ def encode_multimodal_preference_sample(source, tokenizer, multimodal_cfg, prepr
     # print(f'rej dict: {rej_data_dict}', flush=True)
     # print('inputs:', tokenizer.decode([(x if x != -200 else 0) for x in rej_data_dict['input_ids'].tolist()]), flush=True)
     # print('labels:', tokenizer.decode([(x if x != -100 else 0) for x in rej_data_dict['labels'].tolist()]), flush=True)
-    
+
     # image exist in the data
     if 'image' in source:
         rej_data_dict['image'] = win_data_dict['image'] = image
@@ -275,6 +275,7 @@ def preprocess_v1(
     for i, source in enumerate(sources):
         if roles[source[0]["from"]] != conv.roles[0]:
             # Skip the first one if it is not from human
+            print("Skip the first one if it is not from human")
             source = source[1:]
 
         conv.messages = []

@@ -15,7 +15,6 @@
 #    limitations under the License.
 
 import os
-import timm
 import torch
 import logging
 import pathlib
@@ -40,10 +39,9 @@ class DataCollatorForDPODataset(object):
     tokenizer: transformers.PreTrainedTokenizer
     beta: float
     mod_token_weight: float
-    is_kto: bool = False
 
     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
-        batch = preference_collator_fn(instances, self.tokenizer.pad_token_id, is_kto=self.is_kto)
+        batch = preference_collator_fn(instances, self.tokenizer.pad_token_id)
 
         rej_instances, win_instances = list(zip(*instances))
 

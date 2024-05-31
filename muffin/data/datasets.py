@@ -1,11 +1,12 @@
 import io
 import gc
+import os
 import json
 import random
 import numpy
 import torch
 import base64
-
+import pandas as pd
 import os.path as op
 import torch.utils.data as torch_data
 
@@ -14,6 +15,73 @@ from typing import List, Iterator
 from muffin.data.tsv_file import TSVFile
 from torch.utils.data.sampler import Sampler
 from muffin.data.data_processors import register_data_processor
+from muffin.eval.muffin_inference_logp import inference_logp
+import datasets as hf_datasets
+
+def bytes_to_PIL_image(img_buffer):
+    img_io = io.BytesIO(img_buffer)
+    img_io.seek(0)
+    image = Image.open(img_io).convert('RGB')
+    return image
+
+class RLAIFVDataset(torch_data.Dataset):
+    def __init__(self, data_dir: str, reference_model=None,
+                 tokenizer=None, image_token_len=None, img_processor=None, use_im_start_end=True, is_llava15=False):
+        super().__init__()
+
+        self.data_path = op.join(data_dir, 'RLAIF-V-Dataset_with_logp_llava15_base.parquet')
+
+        if not op.exists(self.data_path):
+            os.makedirs(data_dir, exist_ok=True)
+            assert reference_model is not None, "`reference_model` is mandatory when logps do not exist."
+
+            hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+
+            inference_logp(reference_model, tokenizer, hf_data, self.data_path,
+                            image_token_len, img_processor, use_im_start_end, is_llava15=is_llava15)
+
+            torch.distributed.barrier()
+
+            self.data = pd.read_parquet(self.data_path)
+        else:
+            self.data = pd.read_parquet(self.data_path)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        sample = self.data.iloc[index]
+        question = {'from': 'human', 'value': f"<image>\n{sample['question']}"}
+        chosen = {'from': 'gpt', 'value': sample['chosen']}
+        rejected = {'from': 'gpt', 'value': sample['rejected']}
+
+        image = bytes_to_PIL_image(sample['image']['bytes'])
+
+        metainfo = {
+            "origin_dataset": sample['origin_dataset'],
+            "origin_split": sample['origin_split'],
+            "origin_idx": sample['idx'],
+            "image_id": sample['image_path'],
+        }
+
+        data_dict = {
+            'image': image,
+            "question": question,
+            "chosen": chosen,
+            "rejected": rejected,
+            "idx": sample['idx'],
+            "metainfo": metainfo
+        }
+        logps=json.loads(sample['logps'])
+
+        if type(logps) == type([]):
+            (data_dict['ref_win_logp'], data_dict['ref_win_avg_logp'], data_dict['ref_win_per_token_logp'],
+            data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps
+        else:
+            (data_dict['ref_win_logp'], data_dict['ref_win_avg_logp'], data_dict['ref_win_per_token_logp'],
+            data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps['logps']
+
+        return data_dict
 
 
 class ChunckedRandomSampler(Sampler[int]):
@@ -66,7 +134,7 @@ class SingleDataSourceDataset(torch_data.Dataset):
 
         self.fetch_count = 0
         self.clear_at_n_fetch = 1000 + random.randint(100, 1000)
-        
+
         self.shuffle = shuffle
         self.line_numbers = list(range(len(self)))
         if self.shuffle:
@@ -74,7 +142,7 @@ class SingleDataSourceDataset(torch_data.Dataset):
             if len(self.line_numbers) >= 50_000_000:
                 self.line_numbers = list(ChunckedRandomSampler(self))
             else:
-                random.shuffle(self.line_numbers) 
+                random.shuffle(self.line_numbers)
 
     def prepare_border_index(self):
         self.file_border_index = [0]
@@ -181,7 +249,7 @@ class MultiDataSourceDataset(torch_data.Dataset):
             ds_loops.append(ds_loop)
         max_loop = max(ds_loops)
         self.size = max_loop * self.sum_weight
-        
+
         if shuffle:
             for ds in self.ds_list:
                 assert ds.shuffle, f'Single dataset {ds} not shuffled, but multi-source dataset required to be shuffled'
@@ -202,7 +270,7 @@ class MultiDataSourceDataset(torch_data.Dataset):
 
         ds = self.offset2ds[offset]
         ds_inner_idx = n_loop * \
-            self.offset2wt[offset] + offset - self.offset2pd[offset]
+                       self.offset2wt[offset] + offset - self.offset2pd[offset]
         ds_inner_idx = ds_inner_idx % len(ds)
 
         return ds[ds_inner_idx]

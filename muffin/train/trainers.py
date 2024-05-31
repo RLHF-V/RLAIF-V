@@ -1,9 +1,5 @@
 from torch import nn
 from torch.utils.data.sampler import Sampler, RandomSampler, SequentialSampler
-from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
-from transformers.trainer_pt_utils import get_parameter_names
-from transformers.utils.import_utils import is_sagemaker_mp_enabled
-from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
 import os
 import math
 import torch
@@ -14,9 +10,6 @@ from torch.utils.data import DataLoader, Dataset
 import torch.nn.functional as F
 
 from transformers import Trainer
-from transformers.trainer import logger
-from transformers.trainer_utils import EvalLoopOutput, denumpify_detensorize, has_length
-from transformers.trainer_pt_utils import nested_numpify, find_batch_size
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from torch import Tensor
 from torch.nn import Module
@@ -172,8 +165,8 @@ def get_beta_and_logps(data_dict, model, args, is_minicpm=False, is_llava15=Fals
     win_labels = data_dict.pop('win_labels')
     rej_labels = data_dict.pop('rej_labels')
 
-    # win_attention_mask = data_dict.pop('win_attention_mask')
-    # rej_attention_mask = data_dict.pop('rej_attention_mask')
+    win_attention_mask = data_dict.pop('win_attention_mask')
+    rej_attention_mask = data_dict.pop('rej_attention_mask')
 
     ref_win_avg_logp = data_dict.pop('ref_win_avg_logp')
     ref_rej_avg_logp = data_dict.pop('ref_rej_avg_logp')
@@ -202,7 +195,7 @@ def get_beta_and_logps(data_dict, model, args, is_minicpm=False, is_llava15=Fals
 
     concatenated_input_ids = data_dict.pop('concatenated_input_ids')
     concatenated_labels = data_dict.pop('concatenated_labels')
-    # concatenated_attention_mask = data_dict.pop('concatenated_attention_mask')
+    concatenated_attention_mask = data_dict.pop('concatenated_attention_mask')
     concatenated_attention_mask = None
 
     win_token_weight = data_dict.pop('win_token_weight')

@@ -23,12 +23,12 @@
 
 - [2024.05.28] 📃 Our paper is accesible at [arxiv](https://arxiv.org/abs/2405.17220) now!
 - [2024.05.20] 🔥 Our [RLAIF-V-Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset) is used for training [MiniCPM-Llama3-V 2.5](https://huggingface.co/openbmb/MiniCPM-Llama3-V-2_5), which represents the first end-side  GPT-4V level MLLM!
-- [2024.05.20] We open-source the code, weights ([7B](https://huggingface.co/openbmb/RLAIF-V-7B), [12B](https://huggingface.co/openbmb/RLAIF-V-12B)) and [data](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset) of RLAIF-V! 
+- [2024.05.20] We open-source the code, weights ([7B](https://huggingface.co/openbmb/RLAIF-V-7B), [12B](https://huggingface.co/openbmb/RLAIF-V-12B)) and [data](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset) of RLAIF-V!
 
 
 ## 📜 Brief Introduction <!-- omit in toc -->
 
-We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source paradigm for super GPT-4V trustworthiness.  RLAIF-V maximally exploits the open-source feedback from two key perspectives, including high-quality feedback data and online feedback learning algorithm. Notable features of RLAIF-V include: 
+We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source paradigm for super GPT-4V trustworthiness.  RLAIF-V maximally exploits the open-source feedback from two key perspectives, including high-quality feedback data and online feedback learning algorithm. Notable features of RLAIF-V include:
 
 * 💪 **Super GPT-4V Trustworthiness via Open-source Feedback**. By learning from open-source AI feedback, RLAIF-V 12B achieves super GPT-4V trustworthiness in both generative and discriminative tasks.
 
@@ -100,7 +100,7 @@ pip install en_core_web_trf-3.7.3.tar.gz
 
 | Model           | Description    | Download                                                    |
 |-----------------|--------------------|:-:|
-| RLAIF-V 7B  | The most trustworthy variant on LLaVA 1.5 | [🤗](https://huggingface.co/openBMB/RLAIF-V-7B) | 
+| RLAIF-V 7B  | The most trustworthy variant on LLaVA 1.5 | [🤗](https://huggingface.co/openBMB/RLAIF-V-7B) |
 | RLAIF-V 12B | Based on OmniLMM-12B, achieving super GPT-4V trustworthiness. | [🤗](https://huggingface.co/openBMB/RLAIF-V-12B)           |
 
 ## Inference
@@ -139,7 +139,7 @@ python chat.py
 <img src="examples/test.jpeg" width="500px">
 </div>
 
-**Question:** 
+**Question:**
 
 Why did the car in the picture stop?
 
@@ -154,11 +154,11 @@ In the picture, a car stopped on the road due to the presence of a sheep on the 
 
 ## Train
 
-1. Prepare data
+1. Prepare data (Optional)
 
-Download [RLAIF-V Dataset](https://huggingface.co/datasets/HaoyeZhang/RLAIF-V-Dataset) and put it under `train/data`
+If you can access huggingface dataset, you can skip this step, we will automatically download the [RLAIF-V Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset).
 
-If needed, you can modify your data set path [here](muffin/data/data_processors.py#L101) at Line 101.
+If you already downloaded the dataset, you can replace 'openbmb/RLAIF-V-Dataset' to your dataset path [here](muffin/data/datasets.py#L38) at Line 38.
 
 2. Start training
 
@@ -202,7 +202,7 @@ bash ./script/eval_rlaif_objhal.sh ./RLAIF-V_weight ./results/RLAIF-V ./coco2014
 
 1. Prepare MMHal Data
 
-Please download the MMHal evaluation data [here](https://drive.google.com/file/d/1mQyAbeGgRyiVV6qjVkUI1uY_g9E-bDTH/view?usp=sharing), and save the file in `eval/data`. 
+Please download the MMHal evaluation data [here](https://drive.google.com/file/d/1mQyAbeGgRyiVV6qjVkUI1uY_g9E-bDTH/view?usp=sharing), and save the file in `eval/data`.
 
 2. Run the following script to generate for MMHal Bench:
 
@@ -242,7 +242,7 @@ If you find our model/code/data/paper helpful, please consider cite our papers �
 }
 
 @article{yu2024rlaifv,
-  title={RLAIF-V: Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness}, 
+  title={RLAIF-V: Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness},
   author={Yu, Tianyu and Zhang, Haoye and Yao, Yuan and Dang, Yunkai and Chen, Da and Lu, Xiaoman and Cui, Ganqu and He, Taiwen and Liu, Zhiyuan and Chua, Tat-Seng and Sun, Maosong},
   journal={arXiv preprint arXiv:2405.17220},
   year={2024},
