@@ -19,7 +19,7 @@
 
 ## 🎊 更新日志 <!-- omit in toc -->
 
-- [2024.05.28] 📃 RLAIF-V 论文可以在 [arxiv](https://arxiv.org/abs/2405.17220) 访问了，欢迎进一步了解!
+- [2024.05.28] 📃 RLAIF-V 论文可以在 [arXiv](https://arxiv.org/abs/2405.17220) 访问了，欢迎进一步了解!
 - [2024.05.20] 🔥 我们的 [RLAIF-V-Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset) 数据集被用于第一个具有 GPT-4V 性能的端侧多模态大模型 [MiniCPM-Llama3-V 2.5](https://huggingface.co/openbmb/MiniCPM-Llama3-V-2_5) 的训练中！
 - [2024.05.20] 我们开源了 RLAIF-V 的代码，权重（[7B](https://huggingface.co/openbmb/RLAIF-V-7B), [12B](https://huggingface.co/openbmb/RLAIF-V-12B)）和 [数据](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset) !
 
