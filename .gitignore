@@ -2,8 +2,6 @@
 **/__pycache__/
 _temp/
 wandb/
-LLaVA15_7B_checkpoints_zhanghaoye_1/
-LLaVA15_7B_checkpoints/
 pip.txt
 pip_test.txt
 test.py

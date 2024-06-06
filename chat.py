@@ -70,6 +70,9 @@ def expand_question_into_multimodal(question_text, image_token_len, im_st_token,
     return question_text
 
 def wrap_question_for_omni_lmm(question, image_token_len, tokenizer):
+    if isinstance(question, str):
+        question = [{"role": "user", "content": question}]
+
     question = expand_question_into_multimodal(
         question, image_token_len, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, DEFAULT_IMAGE_PATCH_TOKEN)
 
