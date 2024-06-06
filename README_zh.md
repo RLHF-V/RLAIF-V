@@ -61,6 +61,7 @@
 - [安装](#安装)
 - [模型权重](#模型权重)
 - [推理](#推理)
+- [数据构造](#数据构造)
 - [训练](#训练)
 - [评估](#评估)
   - [Object HalBench](#object-halbench)
@@ -147,6 +148,31 @@ In the picture, a car stopped on the road due to the presence of a sheep on the 
 </details>
 
 
+## 数据构造
+
+1. 环境配置
+
+我们提供了 OmniLMM 12B 模型以及 MiniCPM-Llama3-V 2.5 模型进行反馈的方式。如果您希望使用 MiniCPM-Llama3-V 2.5 进行模型推理或反馈，请根据 [MiniCPM-V](https://github.com/OpenBMB/MiniCPM-V) 中的环境配置方法配置其推理环境。
+
+请分别下载我们微调 Llama3 8B 模型得到的[拆分模型](https://thunlp.oss-cn-qingdao.aliyuncs.com/rlaifv_llama3_split_model.tar.gz)和[问题转换](https://thunlp.oss-cn-qingdao.aliyuncs.com/rlaifv_llama3_changeq_model.tar.gz)模型，并将模型分别存储在`./models/llama3_split`文件夹以及`./models/llama3_changeq`下。
+
+2. OmniLMM 12B 模型反馈
+
+以下脚本是一个使用 LLaVA-v1.5-7b 模型生成候选回答，并使用 OmniLMM 12B 模型提供反馈的例子。
+
+```bash
+mkdir ./results
+bash ./script/data_gen/run_data_pipline_llava15_omni.sh
+```
+
+2. MiniCPM-Llama3-V 2.5 模型反馈
+
+以下脚本是一个使用 LLaVA-v1.5-7b 模型生成候选回答，并使用 MiniCPM-Llama3-V 2.5 模型提供反馈的例子。请首先将`./script/data_gen/run_data_pipline_llava15_minicpmv.sh`中`minicpmv_python`替换为您创建的 MiniCPM-V 环境的 Python 路径。
+
+```bash
+mkdir ./results
+bash ./script/data_gen/run_data_pipline_llava15_minicpmv.sh
+```
 
 
 ## 训练
