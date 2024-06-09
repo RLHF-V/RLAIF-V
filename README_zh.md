@@ -253,7 +253,7 @@ bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPEN
 
 ## 引用
 
-如果您觉得我们模型/数据/代码/论文有帮助，请给我们 ⭐ 和 引用 📝，感谢！
+如果您觉得我们的模型/数据/代码/论文有帮助，请给我们 ⭐ 和 引用 📝，感谢！
 
 ```bibtex
 @article{yu2023rlhf,
