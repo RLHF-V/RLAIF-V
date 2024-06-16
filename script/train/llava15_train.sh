@@ -6,7 +6,7 @@ exp_name=llava15_rlaifv
 deepspeed ./muffin/train/train_llava15.py \
     --deepspeed ./script/zero2.json  \
     --model_name_or_path liuhaotian/llava-v1.5-7b \
-    --data_dir ./RLAIF-V-Dataset/ \
+    --data_dir ./RLAIF-V-Dataset_logps/ \
     --image_folder not_used \
     --vision_tower openai/clip-vit-large-patch14-336 \
     --mm_use_im_start_end False \

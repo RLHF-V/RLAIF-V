@@ -1,4 +1,5 @@
 import io
+import os
 import json
 import tqdm
 import copy
@@ -203,8 +204,6 @@ def preference_collator_fn(instances, pad_token_id):
         win_attention_mask=win_batch['attention_mask'],
         rej_attention_mask=rej_batch['attention_mask'],
         images=win_batch['images'],
-        ### debugging
-        idx=win_batch['idx']
     )
     return batch
 
@@ -246,7 +245,7 @@ def get_multimodal_sample_logps(model, dataloader, tokenizer, is_llava15=False):
                         attention_mask=None,
                         past_key_values=None,
                         labels=labels,
-                        images=batch['images'].cuda(),
+                        images=batch['images'].to(dtype=torch.bfloat16, device='cuda'),
                     )
                     output = model.forward(
                         inputs_embeds=inputs_embeds,
@@ -257,7 +256,7 @@ def get_multimodal_sample_logps(model, dataloader, tokenizer, is_llava15=False):
                         input_ids=input_ids,
                         labels=labels,
                         attention_mask=attention_mask,
-                        images=batch['images'].cuda()
+                        images=batch['images'].to(dtype=torch.bfloat16, device='cuda'),
                     )
                 per_token_logp, log_prob, average_log_prob = get_batch_logps(output.logits, labels, return_all=True)
 
@@ -304,9 +303,12 @@ def write_logp_to_preference_parquet(origin_data, cache_file, logps, overwrite_l
 
         out_data.append(new_line)
 
-    df = pd.DataFrame(out_data)
     if torch.distributed.get_rank() == 0:
-        df.to_parquet(cache_file)
+        step = 5000
+        for idx, start in enumerate(range(0, len(out_data), step)):
+            temp_data = out_data[start: min(start+step, len(out_data))]
+            df = pd.DataFrame(temp_data)
+            df.to_parquet(os.path.join(cache_file, f'RLAIF-V-Dataset-withlogp_{idx:03}-{len(temp_data)}.parquet'))
 
     torch.distributed.barrier()
 

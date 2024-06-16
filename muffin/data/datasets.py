@@ -29,28 +29,36 @@ class RLAIFVDataset(torch_data.Dataset):
                  tokenizer=None, image_token_len=None, img_processor=None, use_im_start_end=True, is_llava15=False):
         super().__init__()
 
-        self.data_path = op.join(data_dir, 'RLAIF-V-Dataset_with_logp_llava15_base.parquet')
-
-        if not op.exists(self.data_path):
+        if not op.exists(data_dir):
             os.makedirs(data_dir, exist_ok=True)
+
+        data_path = [file for file in os.listdir(data_dir) if file.endswith('.parquet') and 'logp' in file]
+        self.data_path = data_dir
+
+        if len(data_path) == 0:
             assert reference_model is not None, "`reference_model` is mandatory when logps do not exist."
 
-            hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+            if not op.exists('./RLAIF-V-Dataset'):
+                os.mkdir('./RLAIF-V-Dataset')
+            hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
 
             inference_logp(reference_model, tokenizer, hf_data, self.data_path,
                             image_token_len, img_processor, use_im_start_end, is_llava15=is_llava15)
 
             torch.distributed.barrier()
 
-            self.data = pd.read_parquet(self.data_path)
+            self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
         else:
-            self.data = pd.read_parquet(self.data_path)
+            self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+
+        self.line_idx = list(range(len(self.data)))
+        random.shuffle(self.line_idx)
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index):
-        sample = self.data.iloc[index]
+        sample = self.data[self.line_idx[index]]
         question = {'from': 'human', 'value': f"<image>\n{sample['question']}"}
         chosen = {'from': 'gpt', 'value': sample['chosen']}
         rejected = {'from': 'gpt', 'value': sample['rejected']}
