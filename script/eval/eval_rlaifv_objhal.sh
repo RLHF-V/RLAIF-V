@@ -34,7 +34,7 @@ do
         echo "PWD at `pwd` checkpoint: "$ckpt_path" do Object HalBench output to: "$answer_file
 
         CUDA_VISIBLE_DEVICES=$C python ./muffin/eval/muffin_vqa.py \
-            --model-name $ckpt_path \
+            --model-path $ckpt_path \
             --question-file $q_file \
             --answers-file $answer_file &
         C=$((C+1))
