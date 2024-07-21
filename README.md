@@ -236,7 +236,7 @@ Please download the MMHal evaluation data [here](https://drive.google.com/file/d
 ```bash
 # cd RLAIF-V
 
-bash ./script/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPENAI_API_KEY}
+bash ./script/eval/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPENAI_API_KEY}
 ```
 
 
