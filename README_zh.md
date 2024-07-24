@@ -19,7 +19,6 @@
 
 ## 🎊 更新日志 <!-- omit in toc -->
 
-- [2024.06.07] 🌟 我们开源了 [AI 反馈数据构造代码](#data-generation)，支持通过 OmniLMM-12B 和 MiniCPM-Llama3-V 2.5 提供反馈。欢迎试用！
 - [2024.05.28] 📃 RLAIF-V 论文可以在 [arXiv](https://arxiv.org/abs/2405.17220) 访问了，欢迎进一步了解!
 - [2024.05.20] 🔥 我们的 [RLAIF-V-Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset) 数据集被用于第一个具有 GPT-4V 性能的端侧多模态大模型 [MiniCPM-Llama3-V 2.5](https://huggingface.co/openbmb/MiniCPM-Llama3-V-2_5) 的训练中！
 - [2024.05.20] 我们开源了 RLAIF-V 的代码，权重（[7B](https://huggingface.co/openbmb/RLAIF-V-7B), [12B](https://huggingface.co/openbmb/RLAIF-V-12B)）和 [数据](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset) !
@@ -148,32 +147,6 @@ In the picture, a car stopped on the road due to the presence of a sheep on the 
 
 </details>
 
-
-## 数据构造
-
-1. 环境配置
-
-我们提供了 OmniLMM 12B 模型以及 MiniCPM-Llama3-V 2.5 模型进行反馈的方式。如果您希望使用 MiniCPM-Llama3-V 2.5 进行模型推理或反馈，请根据 [MiniCPM-V](https://github.com/OpenBMB/MiniCPM-V) 中的环境配置方法配置其推理环境。
-
-请分别下载我们微调 Llama3 8B 模型得到的[拆分模型](https://thunlp.oss-cn-qingdao.aliyuncs.com/rlaifv_llama3_split_model.tar.gz)和[问题转换模型](https://thunlp.oss-cn-qingdao.aliyuncs.com/rlaifv_llama3_changeq_model.tar.gz)，并将模型分别存储在`./models/llama3_split`文件夹以及`./models/llama3_changeq`下。
-
-2. OmniLMM 12B 模型反馈
-
-以下脚本是一个使用 LLaVA-v1.5-7b 模型生成候选回答，并使用 OmniLMM 12B 模型提供反馈的例子。
-
-```bash
-mkdir ./results
-bash ./script/data_gen/run_data_pipline_llava15_omni.sh
-```
-
-2. MiniCPM-Llama3-V 2.5 模型反馈
-
-以下脚本是一个使用 LLaVA-v1.5-7b 模型生成候选回答，并使用 MiniCPM-Llama3-V 2.5 模型提供反馈的例子。请首先将`./script/data_gen/run_data_pipline_llava15_minicpmv.sh`中`minicpmv_python`替换为您创建的 MiniCPM-V 环境的 Python 路径。
-
-```bash
-mkdir ./results
-bash ./script/data_gen/run_data_pipline_llava15_minicpmv.sh
-```
 
 
 ## 训练
