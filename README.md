@@ -193,7 +193,7 @@ Please replace `{YOUR_OPENAI_API_KEY}` with a valid OpenAI api-key.
 ```bash
 # cd RLAIF-V
 
-bash ./script/eval/eval_rlaif_objhal.sh ./RLAIF-V_weight ./results/RLAIF-V ./coco2014/annotations {YOUR_OPENAI_API_KEY}
+bash ./script/eval/eval_rlaifv_objhal.sh ./RLAIF-V_weight ./results/RLAIF-V ./coco2014/annotations {YOUR_OPENAI_API_KEY}
 ```
 
 
