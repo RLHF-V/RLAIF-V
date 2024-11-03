@@ -64,16 +64,16 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 - [Install](#install)
 - [Model Weights](#model-weights)
 - [Inference](#inference)
-- [Data Generation](#data-generation)
 - [Train](#train)
 - [Evaluation](#evaluation)
   - [Object HalBench](#object-halbench)
   - [MMHal Bench](#mmhal-bench)
+  - [RefoMB](#refomb)
 - [Citation](#citation)
 
 ## Dataset
 
-We present the [RLAIF-V Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset), which is an AI generated preference dataset covering diverse range of tasks and domains. This open-source multimodal preference datasets contains more than 30K high-quality comparison pairs.
+We present the [RLAIF-V Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset), which is an AI generated preference dataset covering diverse range of tasks and domains. This open-source multimodal preference datasets contains more than 30K high-quality comparison pairs. The dataset contains the generated preference pairs in each iteration of different generation models, including LLaVA 1.5 7B, OmniLMM 12B and MiniCPM-V.
 
 ## Install
 
@@ -161,6 +161,8 @@ If you already downloaded the dataset, you can replace 'openbmb/RLAIF-V-Dataset'
 
 2. Start training
 
+Here, we provide a training script to train the model in **1 iteration**. The `max_step` parameter should be adjusted according to the amount of your data. 
+
 Run the following command to start training.
 
 ```bash
@@ -210,6 +212,52 @@ Please download the MMHal evaluation data [here](https://drive.google.com/file/d
 
 bash ./script/eval/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR_OPENAI_API_KEY}
 ```
+
+### RefoMB
+
+1. Preparation
+
+To use GPT-4 evaluation, please first run `pip install openai==0.28` to install openai package. Next, change the `openai.base` and `openai.api_key` in `eval/gpt4.py` into your own setting.
+
+Evaluation data for dev set can be found at `data/RefoMB_dev.jsonl`. You need to download each image from the `image_url` key in each line.
+
+2. Evaluation for overall score
+
+Save your model answer in `answer` key of the input data file `data/RefoMB_dev.jsonl`, for example:
+
+```
+{
+    "image_url": "https://thunlp.oss-cn-qingdao.aliyuncs.com/multimodal_openmme_test_20240319__20.jpg",
+    "question": "What is the background of the image?",
+    "type": "Coarse Perception",
+    "split": "dev",
+    "answer": "The background of the image features trees, suggesting that the scene takes place outdoors.",
+    "gt_description": "......"
+}
+```
+
+Run the following script to evaluate your model result:
+
+```
+save_dir="YOUR SAVING DIR"
+model_ans_path="YOUR MODEL ANSWER PATH"
+model_name="YOUR MODEL NAME"
+
+bash ./script/eval/run_refobm_overall.sh $save_dir $model_ans_path $model_name
+```
+
+3. Evaluation for hallucination score
+
+After evaluating the overall score, an evaluation result file will be created with name `A-GPT-4V_B-${model_name}.json`. Using this evaluation result file to calculate the hallucination score as follows:
+
+```
+eval_result="EVAL RESULT FILE PATH, e.g. 'A-GPT-4V_B-${model_name}'"
+# Do not include ".json" in your file path!
+
+bash ./script/eval/run_refomb_hall.sh $eval_result
+```
+
+4. **Note:** For better stability, we recommend you to evaluate more than **3 times** and use the **average score** as the final model score.
 
 
 ## Licenses <!-- omit in toc -->
