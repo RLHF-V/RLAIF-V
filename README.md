@@ -64,6 +64,7 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 - [Install](#install)
 - [Model Weights](#model-weights)
 - [Inference](#inference)
+- [Data Generation](#data-generation)
 - [Train](#train)
 - [Evaluation](#evaluation)
   - [Object HalBench](#object-halbench)
@@ -151,6 +152,32 @@ In the picture, a car stopped on the road due to the presence of a sheep on the 
 </details>
 
 
+## Data Generation
+1. Environment Setup
+
+We provide the OmniLMM 12B model and the MiniCPM-Llama3-V 2.5 model for feedback generation. If you wish to use the MiniCPM-Llama3-V 2.5 for giving feedback, please configure its inference environment according to the instructions in the [MiniCPM-V GitHub repository](https://github.com/OpenBMB/MiniCPM-V).
+
+Please download our fine-tuned Llama3 8B models: [split model](https://thunlp.oss-cn-qingdao.aliyuncs.com/rlaifv_llama3_split_model.tar.gz) and [question transformation model](https://thunlp.oss-cn-qingdao.aliyuncs.com/rlaifv_llama3_changeq_model.tar.gz), and store them in the `./models/llama3_split` folder and the `./models/llama3_changeq` folder respectively.
+
+2. OmniLMM 12B Model Feedback
+
+The following script demonstrates using the LLaVA-v1.5-7b model to generate candidate answers and the OmniLMM 12B model to provide feedback.
+
+```bash
+mkdir ./results
+bash ./script/data_gen/run_data_pipeline_llava15_omni.sh
+```
+
+3. MiniCPM-Llama3-V 2.5 Model Feedback
+
+The following script demonstrates using the LLaVA-v1.5-7b model to generate candidate answers and the MiniCPM-Llama3-V 2.5 model to provide feedback. First, replace `minicpmv_python` in `./script/data_gen/run_data_pipeline_llava15_minicpmv.sh` with the Python path of the MiniCPM-V environment you created.
+
+```bash
+mkdir ./results
+bash ./script/data_gen/run_data_pipeline_llava15_minicpmv.sh
+```
+
+
 ## Train
 
 1. Prepare data (Optional)
@@ -159,7 +186,7 @@ If you can access huggingface dataset, you can skip this step, we will automatic
 
 If you already downloaded the dataset, you can replace 'openbmb/RLAIF-V-Dataset' to your dataset path [here](muffin/data/datasets.py#L38) at Line 38.
 
-2. Start training
+2. Training
 
 Here, we provide a training script to train the model in **1 iteration**. The `max_step` parameter should be adjusted according to the amount of your data. 
 
@@ -169,9 +196,25 @@ Run the following command to start training.
 bash ./script/train/llava15_train.sh
 ```
 
+3. Iterative alignment
+
+To reproduce the iterative training process in the paper, you need to do the following steps for 4 times:
+- **S1. Data generation.**
+
+  Follow the instructions in [data generation](data-generation) to generate preference pairs for the base model. Convert the generated jsonl file to huggingface parquet.
+- **S2. Change training config.**
+
+  In dataset code, replace `'openbmb/RLAIF-V-Dataset'` [here](muffin/data/datasets.py#L38) to your data path.
+
+  In [training script](script/train/llava15_train.sh), replace `--data_dir` with a new directory, replace `--model_name_or_path` with the base model path, set `--max_step` to the number of steps for 4 epoch, set `--save_steps` to the number of steps for 1/4 epoch.
+- **S3. Do DPO training.**
+
+  Run the training script to train the base model.
+- **S4. Choose base model for next iteration.**
+
+  Evaluate each checkpoint on Object HalBench and MMHal Bench, choose the best-performed checkpoint as the base model in the next iteration.
+
 ## Evaluation
-
-
 
 ### Object HalBench
 
