@@ -74,7 +74,7 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 
 ## Dataset
 
-We present the [RLAIF-V Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset), which is an AI generated preference dataset covering diverse range of tasks and domains. This open-source multimodal preference datasets contains more than 30K high-quality comparison pairs. The dataset contains the generated preference pairs in each iteration of different generation models, including LLaVA 1.5 7B, OmniLMM 12B and MiniCPM-V.
+We present the [RLAIF-V Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset), which is an AI generated preference dataset covering diverse range of tasks and domains. This open-source multimodal preference datasets contains **83,132 high-quality comparison pairs**. The dataset contains the generated preference pairs in each training iteration of different models, including LLaVA 1.5 7B, OmniLMM 12B and MiniCPM-V.
 
 ## Install
 
