@@ -3,7 +3,7 @@
 # `model_data_dir` is the directory for saving evaluation results
 # `path_model` is the file path for the model answers
 # `model_name` is the evaluated model name
-path_gpt4v="data/gpt4v_RefoMB_dev_0521.jsonl"
+path_gpt4v="eval/data/gpt4v_RefoMB_dev_0521.jsonl"
 model_data_dir=$1
 path_model=$2
 model_name=$3
