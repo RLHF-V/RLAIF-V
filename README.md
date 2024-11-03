@@ -219,11 +219,11 @@ bash ./script/eval/eval_rlaifv_mmhal.sh ./RLAIF-V_weight ./results/RLAIF-V {YOUR
 
 To use GPT-4 evaluation, please first run `pip install openai==0.28` to install openai package. Next, change the `openai.base` and `openai.api_key` in `eval/gpt4.py` into your own setting.
 
-Evaluation data for dev set can be found at `data/RefoMB_dev.jsonl`. You need to download each image from the `image_url` key in each line.
+Evaluation data for dev set can be found at `eval/data/RefoMB_dev.jsonl`. You need to download each image from the `image_url` key in each line.
 
 2. Evaluation for overall score
 
-Save your model answer in `answer` key of the input data file `data/RefoMB_dev.jsonl`, for example:
+Save your model answer in `answer` key of the input data file `eval/data/RefoMB_dev.jsonl`, for example:
 
 ```
 {
