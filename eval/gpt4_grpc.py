@@ -25,7 +25,6 @@ class Chat:
         return response
 
 
-# 'gpt-4-0314'
 def get_eval(model, content: str,
              chat_gpt_system='You are a helpful and precise assistant for checking the quality of the answer.',
              max_tokens: int=256,

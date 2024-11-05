@@ -26,7 +26,7 @@ do
 done
 echo "Process these checkpoints: [$filered_to_process_ckpt_list]"
 
-C=3
+C=0
 
 for ckpt_path in $filered_to_process_ckpt_list;
 do
@@ -37,7 +37,9 @@ do
         CUDA_VISIBLE_DEVICES=$C python ./muffin/eval/muffin_vqa.py \
             --model-path $ckpt_path \
             --question-file $q_file \
-            --answers-file $answer_file &
+            --answers-file $answer_file \
+            --temperature 0 \
+            --num_beam 3 &
         C=$((C+1))
         echo "C=$C"
         if [[ $C == 8 ]]; then
@@ -54,22 +56,15 @@ echo "========>Done generating answers<========"
 echo "========>Start evaluating answers<========"
 
 answer_file=$save_dir/$answer_file_name
+gpt_model=gpt-4-1106-preview
 
-python ./eval/change_mmhal_predict_template.py \
-    --response-template $template_file \
-    --answers-file $answer_file \
-    --save-file $answer_file.template.json
-
+echo "PWD at `pwd` checkpoint: "${save_dir}/$answer_file_name" do MMHal Eval"
 python ./eval/eval_gpt_mmhal.py \
-    --response $answer_file.template.json \
-    --evaluation $answer_file.mmhal_test_eval.json \
-    --api-key $3 >> ${answer_file}.eval_log.txt
-
-# Merge gpt4 evaluation to the original model outputs, can be ignore
-python ./eval/merge_mmhal_review_with_predict.py \
-    --review_path ${answer_file}.mmhal_test_eval.json \
-    --predict_path ${answer_file} \
-    --save_path ${answer_file}.mmhal_test_all_infos.json
+    --response ${answer_file} \
+    --evaluation ${answer_file}.mmhal_test_eval.json \
+    --gpt-model $gpt_model \
+    --api-key $3 \
+    --is_jsonl > ${answer_file}.eval_log.log
 
 python ./eval/summarize_gpt_mmhal_review.py $save_dir > $save_dir/mmhal_scores.txt
 

@@ -1,6 +1,8 @@
+import os
 import argparse
 import json
 import time
+import jsonlines
 from gpt4_grpc import Chat
 
 template = '''Please act as an impartial and objective judge and evaluate the quality of the response provided by a Large Multimodal Model (LMM) to the user question. Your evaluation should be mainly based on whether the response is informative, and whether the response contains any hallucination. Hallucination, in this context, refers to a situation where the LMM generates a response that includes information not present or implied in the image or previous conversation. A hallucination could be a false claim about an object, action, emotion, or any other detail that is not grounded in the image.
@@ -73,20 +75,63 @@ To evaluate the LMM responses, first, begin your evaluation by providing a short
 {}
 '''
 
+def read_jsonl(jsonl_file):
+    data = []
+    with open(jsonl_file, 'r', encoding='utf-8') as f1:
+        for item in jsonlines.Reader(f1):
+            data.append(item)
+    return data
+
+def read_json(path):
+    with open(path, "r") as f:
+        data = json.load(f)
+    return data
+
+def save_json(json_path, data, indent=4):
+    with open(json_path, "w") as f:
+        json.dump(data, f, indent=indent, ensure_ascii=False)
+
+
+def merge_template_answer(data, org_data, save_path):
+    if not os.path.exists(os.path.dirname(save_path)):
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+    for i in range(len(org_data)):
+        if 'answer' in data[i].keys():
+            answer = data[i]['answer'].replace("Assistant:", "").strip()
+        elif 'text' in data[i].keys():
+            answer = data[i]['text'].replace("Assistant:", "").strip()
+        elif 'model_answer' in data[i].keys():
+            answer = data[i]['model_answer'].replace("Assistant:", "").strip()
+
+        org_data[i]["model_answer"] = answer
+
+    save_json(save_path, org_data)
+
+    return org_data
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--response', type=str, default='responses/idefics_80b.json', help='response file containing images, questions, and model responses')
     parser.add_argument('--evaluation', type=str, default=None, help='GPT-4 evaluation results to be saved')
     parser.add_argument('--api-key', type=str, required=True)
-    parser.add_argument('--gpt-model', type=str, default='gpt-4-0314')
-    parser.add_argument('--temp_new', action='store_true')
+    parser.add_argument('--response-template', type=str, default="./eval/data/mmhal-bench_answer_template.json")
+    parser.add_argument('--gpt-model', type=str, default='gpt-4-1106-preview')
+    parser.add_argument('--is_jsonl', action='store_true')
     args = parser.parse_args()
 
     print(args)
 
-    # load json file
-    with open(args.response, 'r') as f:
-        records = json.load(f)
+    if args.is_jsonl:
+        org_data = read_json(args.response_template)
+        data = read_jsonl(args.response)
+        os.makedirs(os.path.dirname(args.response), exist_ok=True)
+        records = merge_template_answer(data, org_data, f'{args.response}.template.json')
+
+    else:
+        # load json file, the json file should be in the same format as the response-template file
+        with open(args.response, 'r') as f:
+            records = json.load(f)
 
     assert len(records) == 96
 
@@ -98,6 +143,7 @@ if __name__ == '__main__':
         image_content = ', '.join(record['image_content'])
 
         input_text = template.format(image_content, record['question'], record['gt_answer'], record['model_answer'])
+        print(input_text)
 
         response = None
         while response is None:
@@ -134,8 +180,18 @@ if __name__ == '__main__':
 
     # save responses
     if args.evaluation is not None:
+        os.makedirs(os.path.dirname(args.evaluation), exist_ok=True)
+
         with open(args.evaluation, 'w') as f:
             json.dump(responses, f, indent=2)
+
+    # merge gpt4 evaluation to answer
+    for i in range(len(records)):
+        records[i]["gpt4_review"] = responses[i]["choices"][0]["message"]["content"]
+
+    os.makedirs(os.path.dirname(args.evaluation), exist_ok=True)
+    with open(f'{args.evaluation}.merge_gpt4_score.json', "w") as f:
+        json.dump(records, f, indent=4)
 
     # analyze responses
     scores = []
@@ -166,5 +222,5 @@ if __name__ == '__main__':
         scores_each[question_type].append(scores[i])
 
     print('Average score: {:.2f}'.format(sum(scores) / len(scores)))
-    print('Hallucination rate: {:.2f}'.format(sum(hallucination) / len(hallucination)))
+    print('Hallucination rate: {:.3f}'.format(sum(hallucination) / len(hallucination)))
     print('Average score for each question type:', ','.join([str(round(sum(scores_each[i]) / len(scores_each[i]), 2)) for i in range(8)]), flush=True)

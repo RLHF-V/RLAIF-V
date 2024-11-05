@@ -36,7 +36,9 @@ do
         CUDA_VISIBLE_DEVICES=$C python ./muffin/eval/muffin_vqa.py \
             --model-path $ckpt_path \
             --question-file $q_file \
-            --answers-file $answer_file &
+            --answers-file $answer_file \
+            --temperature 0 \
+            --num_beam 3 &
         C=$((C+1))
         echo "C=$C"
         if [[ $C == 8 ]]; then

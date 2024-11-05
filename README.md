@@ -188,7 +188,7 @@ If you already downloaded the dataset, you can replace 'openbmb/RLAIF-V-Dataset'
 
 2. Training
 
-Here, we provide a training script to train the model in **1 iteration**. The `max_step` parameter should be adjusted according to the amount of your data. 
+Here, we provide a training script to train the model in **1 iteration**. The `max_step` parameter should be adjusted according to the amount of your data.
 
 Run the following command to start training.
 
@@ -235,6 +235,8 @@ unzip annotations_trainval2014.zip
 
 Please replace `{YOUR_OPENAI_API_KEY}` with a valid OpenAI api-key.
 
+**Note: The evaluation is based on `gpt-3.5-turbo-0613`.**
+
 ```bash
 # cd RLAIF-V
 
@@ -249,6 +251,8 @@ bash ./script/eval/eval_rlaifv_objhal.sh ./RLAIF-V_weight ./results/RLAIF-V ./co
 Please download the MMHal evaluation data [here](https://drive.google.com/file/d/1mQyAbeGgRyiVV6qjVkUI1uY_g9E-bDTH/view?usp=sharing), and save the file in `eval/data`.
 
 2. Run the following script to generate for MMHal Bench:
+
+**Note: The evaluation is based on `gpt-4-1106-preview`.**
 
 ```bash
 # cd RLAIF-V

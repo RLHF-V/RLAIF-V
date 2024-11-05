@@ -679,7 +679,7 @@ if __name__ == '__main__':
     print("=======load prediction=======")
     print("load imgids file:", args.cap_file)
     _, imids, _ = load_generated_captions(args.cap_file, org_dir=args.org_folder)
-    # assert len(imids) == 300
+    assert len(imids) == 300
 
     print("=======init evaluator=======")
     evaluator = CHAIR(imids, args.coco_path, args.openai_key)
