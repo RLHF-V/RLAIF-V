@@ -201,7 +201,7 @@ bash ./script/train/llava15_train.sh
 To reproduce the iterative training process in the paper, you need to do the following steps for 4 times:
 - **S1. Data generation.**
 
-  Follow the instructions in [data generation](data-generation) to generate preference pairs for the base model. Convert the generated jsonl file to huggingface parquet.
+  Follow the instructions in [data generation](https://github.com/RLHF-V/RLAIF-V?tab=readme-ov-file#data-generation) to generate preference pairs for the base model. Convert the generated jsonl file to huggingface parquet.
 - **S2. Change training config.**
 
   In dataset code, replace `'openbmb/RLAIF-V-Dataset'` [here](muffin/data/datasets.py#L38) to your data path.
