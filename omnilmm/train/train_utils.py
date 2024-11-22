@@ -12,12 +12,6 @@ import numpy as np
 from typing import Dict, Optional, Sequence
 from omnilmm import conversation as conversation_lib
 
-IGNORE_INDEX = -100
-DEFAULT_IMAGE_TOKEN = "<image>"
-DEFAULT_IMAGE_PATCH_TOKEN = "<im_patch>"
-DEFAULT_IM_START_TOKEN = "<im_start>"
-DEFAULT_IM_END_TOKEN = "<im_end>"
-
 
 def _tokenize_fn(strings: Sequence[str],
                  tokenizer: transformers.PreTrainedTokenizer) -> Dict:

@@ -14,12 +14,11 @@ import torch.utils.data as torch_data
 
 from llava.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from llava.conversation import conv_templates
-from llava.model.builder import load_pretrained_model
+from builder.builder import load_pretrained_model
 from llava.mm_utils import tokenizer_image_token, process_images, get_model_name_from_path
 
 
 def torch_pad_sequence(sequence, padding_value, batch_first=True, padding_side='right'):
-
     if padding_side == 'right':
         sequence = torch.nn.utils.rnn.pad_sequence(
             sequence,
@@ -35,9 +34,11 @@ def torch_pad_sequence(sequence, padding_value, batch_first=True, padding_side='
         raise NotImplementedError(f'padding_size={padding_side}')
     return sequence
 
+
 class InferenceSampler(torch.utils.data.sampler.Sampler):
 
     def __init__(self, size):
+        super().__init__()
         self._size = int(size)
         assert size > 0
         self._rank = torch.distributed.get_rank()
@@ -61,6 +62,7 @@ class InferenceSampler(torch.utils.data.sampler.Sampler):
     def __len__(self):
         return len(self._local_indices)
 
+
 class GenDataset(torch_data.Dataset):
     def __init__(self, qa_file, question_process, max_size, start=0, end=-1, repeat_time=1):
         '''
@@ -74,7 +76,7 @@ class GenDataset(torch_data.Dataset):
         try:
             self.qa_data = [json.loads(line) for line in open(self.qa_file)]
             if isinstance(self.qa_data[0], list):
-                self.qa_data = self.qa_data[0] # unwrap one-line json question file
+                self.qa_data = self.qa_data[0]  # unwrap one-line json question file
         except:
             try:
                 with open(self.qa_file, "r") as f:
@@ -130,7 +132,7 @@ class GenDataset(torch_data.Dataset):
             # print("in metainfos")
             image = Image.open(item['metainfos']['image_path']).convert('RGB')
 
-        metainfo = {key:value for key,value in item.items() if key not in ["image_id", "question", "image"]}
+        metainfo = {key: value for key, value in item.items() if key not in ["image_id", "question", "image"]}
 
         raw_question = item['question']
 
@@ -138,7 +140,7 @@ class GenDataset(torch_data.Dataset):
         # print("question_input_ids:", question_input_ids)
 
         return {
-            'question_id': item['question_id'] if 'question_id' in item else self.start_idx+index,
+            'question_id': item['question_id'] if 'question_id' in item else self.start_idx + index,
             'image': image,
             'question_input_ids': question_input_ids,
             'raw_question': raw_question,
@@ -148,6 +150,7 @@ class GenDataset(torch_data.Dataset):
 
     def __len__(self):
         return len(self.qa_data)
+
 
 def wrap_question_for_llava15(question, tokenizer, mm_use_im_start_end, conv_mode):
     qs = question
@@ -167,6 +170,7 @@ def wrap_question_for_llava15(question, tokenizer, mm_use_im_start_end, conv_mod
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt')
 
     return input_ids
+
 
 def llava15_qa_colloator_fn(data_list, tokenizer, image_processor, config):
     input_ids = [torch.as_tensor(x['question_input_ids']) for x in data_list]
@@ -202,6 +206,7 @@ def llava15_qa_colloator_fn(data_list, tokenizer, image_processor, config):
         data['metainfos'] = [x['metainfos'] for x in data_list]
 
     return data
+
 
 if __name__ == '__main__':
 
@@ -240,14 +245,18 @@ if __name__ == '__main__':
     print(f'Init Rank-{torch.distributed.get_rank()}')
     model_path = os.path.expanduser(args.checkpoint)
     model_name = get_model_name_from_path(model_path)
-    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, args.model_base, model_name, device_map={"": 'cuda'}) # device_map={"": 'cuda'}
+    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, args.model_base, model_name,
+                                                                           device_map={
+                                                                               "": 'cuda'})  # device_map={"": 'cuda'}
 
     random.seed(args.seed)
 
     question_process_func = partial(
-            wrap_question_for_llava15, tokenizer=tokenizer, mm_use_im_start_end=model.config.mm_use_im_start_end, conv_mode=args.conv_mode)
+        wrap_question_for_llava15, tokenizer=tokenizer, mm_use_im_start_end=model.config.mm_use_im_start_end,
+        conv_mode=args.conv_mode)
 
-    dataset = GenDataset(args.ds_name, question_process_func, max_size=args.max_sample, start=args.start_pos, end=args.end_pos, repeat_time=args.repeat)
+    dataset = GenDataset(args.ds_name, question_process_func, max_size=args.max_sample, start=args.start_pos,
+                         end=args.end_pos, repeat_time=args.repeat)
     print(f'Dataset size is {len(dataset)}')
 
     collate_fn = partial(llava15_qa_colloator_fn, tokenizer=tokenizer,
@@ -276,7 +285,7 @@ if __name__ == '__main__':
             # print(f'input_ids: {batch["input_ids"]}')
             # print(f'Input: {tokenizer.batch_decode(batch["input_ids"])}'
             #       f'input_ids: {batch["input_ids"]}')
-                #   f'attn_mask: {batch["attention_mask"]}')
+            #   f'attn_mask: {batch["attention_mask"]}')
             if args.is_yesno:
                 output = model.generate(
                     inputs=batch['input_ids'].cuda(),
@@ -293,10 +302,15 @@ if __name__ == '__main__':
                 # print("output_scores len:", len(output.scores))
                 output_scores_all = torch.stack(output.scores, dim=0)
                 # print(output_scores_all.shape)
-                output_scores_reshape = (batch['input_ids'].shape[0], len(output.scores), args.num_beam, output.scores[0].shape[-1])
+                output_scores_reshape = (
+                batch['input_ids'].shape[0], len(output.scores), args.num_beam, output.scores[0].shape[-1])
                 new_output_scores = output_scores_all.view(output_scores_reshape)
 
-                for question, output_ids, output_scores, question_id, metainfos in zip(batch['raw_questions'], output.sequences, new_output_scores, batch['question_id'], batch['metainfos']):
+                for question, output_ids, output_scores, question_id, metainfos in zip(batch['raw_questions'],
+                                                                                       output.sequences,
+                                                                                       new_output_scores,
+                                                                                       batch['question_id'],
+                                                                                       batch['metainfos']):
 
                     response = tokenizer.decode(
                         output_ids, skip_special_tokens=True)
@@ -324,13 +338,13 @@ if __name__ == '__main__':
                         })
                     else:
                         outputs.append({
-                        'question_id': question_id,
-                        'raw_question': question,
-                        'answer': response,
-                        'scores': item_scores,
-                        'metainfos': metainfos,
-                        'model_path': args.checkpoint
-                    })
+                            'question_id': question_id,
+                            'raw_question': question,
+                            'answer': response,
+                            'scores': item_scores,
+                            'metainfos': metainfos,
+                            'model_path': args.checkpoint
+                        })
 
             else:
                 if args.num_beam >= 1:
@@ -357,9 +371,10 @@ if __name__ == '__main__':
                         return_dict_in_generate=True)
 
                 # print(output.scores, flush=True)
-                for question, output_ids, question_id, metainfos in zip(batch['raw_questions'], output.sequences, batch['question_id'], batch['metainfos']):
+                for question, output_ids, question_id, metainfos in zip(batch['raw_questions'], output.sequences,
+                                                                        batch['question_id'], batch['metainfos']):
                     response = tokenizer.decode(
-                            output_ids, skip_special_tokens=True)
+                        output_ids, skip_special_tokens=True)
                     response = response.strip()
 
                     if 'ds_question_id' in metainfos:
