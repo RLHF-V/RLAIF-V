@@ -12,7 +12,8 @@ from llava.constants import DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, D
 class LLaVABuilder(ModelBuilder):
     @classmethod
     def judge_able_to_build(cls, model_name: str) -> bool:
-        return 'llava' in model_name.lower()
+        lower_name = model_name.lower()
+        return 'llava' in lower_name or ('rlaif' in lower_name and '7b' in lower_name)
 
     @classmethod
     def build(cls, model_path, model_base, model_name, **kwargs):

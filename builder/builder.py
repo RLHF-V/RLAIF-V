@@ -65,9 +65,9 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         kwargs['attn_implementation'] = 'flash_attention_2'
 
     # import here to avoid circular import
-    from llava_builder import LLaVABuilder
-    from omnillm_builder import OmniLLMBuilder
-    from language_model_builder import LanguageModelBuilder
+    from .llava_builder import LLaVABuilder
+    from .omnillm_builder import OmniLLMBuilder
+    from .language_model_builder import LanguageModelBuilder
 
     # Note: please put LanguageModelBuilder at the end of the list if you want you add your own builder
     model_builder_list = [LLaVABuilder, OmniLLMBuilder, LanguageModelBuilder]

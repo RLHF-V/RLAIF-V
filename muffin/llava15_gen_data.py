@@ -38,7 +38,6 @@ def torch_pad_sequence(sequence, padding_value, batch_first=True, padding_side='
 class InferenceSampler(torch.utils.data.sampler.Sampler):
 
     def __init__(self, size):
-        super().__init__()
         self._size = int(size)
         assert size > 0
         self._rank = torch.distributed.get_rank()

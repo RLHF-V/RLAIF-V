@@ -55,7 +55,6 @@ def get_batch_logps_minicpm(logits: torch.FloatTensor, labels: torch.LongTensor,
 class InferenceSampler(torch.utils.data.sampler.Sampler):
 
     def __init__(self, size):
-        super().__init__()
         self._size = int(size)
         assert size > 0
         self._rank = torch.distributed.get_rank()

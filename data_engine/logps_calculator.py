@@ -20,7 +20,7 @@ import torch
 import torch.distributed as dist
 
 
-def preference_collator_fn(instances, pad_token_id, use_12b_model=False):
+def preference_collator_fn(instances, pad_token_id, is_omni=False):
     rej_instances, win_instances = list(zip(*instances))
     rej_batch = SFT_collator_fn(rej_instances, pad_token_id)
     win_batch = SFT_collator_fn(win_instances, pad_token_id)
@@ -29,7 +29,7 @@ def preference_collator_fn(instances, pad_token_id, use_12b_model=False):
     concatenated_labels = concate_pad(win_batch['labels'], rej_batch['labels'], -100)
     concatenated_attention_mask = concatenated_input_ids.ne(pad_token_id)
 
-    if not use_12b_model:
+    if not is_omni:
         if isinstance(win_batch['images'][0], BatchFeature):
             win_images = torch.stack([torch.tensor(img.pixel_values[0]) for img in win_batch['images']])
         elif isinstance(win_batch['images'][0], np.ndarray):
@@ -47,7 +47,7 @@ def preference_collator_fn(instances, pad_token_id, use_12b_model=False):
         rej_labels=rej_batch['labels'],
         win_attention_mask=win_batch['attention_mask'],
         rej_attention_mask=rej_batch['attention_mask'],
-        images=win_batch['images'] if use_12b_model else win_images,
+        images=win_batch['images'] if is_omni else win_images,
     )
     return batch
 
@@ -157,36 +157,54 @@ def write_logp_to_preference_parquet(origin_data, cache_file, logps, overwrite_l
     return df
 
 
-def inference_logp(model_path, dataset_path, output_file, use_12b_model=False):
+def inference_logp(
+        model_name,
+        model_path,
+        dataset_path,
+        output_file):
+    """
+    Args:
+        model_name:  e.g. llava-v1.5-7, OmniLMM-12B, RLAIF-V-12B
+        model_path: path to your model
+        dataset_path: path to dataset(should follow RLAIF-V-Dataset format)
+        output_file: path to outputfile(logps)
+
+    Returns:
+
+    """
     dist.init_process_group(backend='nccl', world_size=int(os.getenv('WORLD_SIZE', '1')),
                             rank=int(os.getenv('RANK', '0')), )
     torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
-    if not use_12b_model:
-        model_name = 'llava-v1.5-7b'
-        tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
-                                                                               device_map={"": 'cuda'})
-    else:
-        model_name = 'OmniLMM-12B'
-        tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
-                                                                               device_map={"": 'cuda'})
+    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
+                                                                           device_map={"": 'cuda'})
+    image_token_len = 0
+    if hasattr(model, "model") and hasattr(model.model, "config") and hasattr(model.model.config, "num_query"):
         image_token_len = model.model.config.num_query
 
     model = model.to(dtype=torch.bfloat16, device='cuda')
     hf_data = hf_datasets.load_dataset(dataset_path, cache_dir='./cache')['train'].cast_column("image",
                                                                                                hf_datasets.Image(
                                                                                                    decode=False))
-    dataset = PreferenceInferenceDataset(tokenizer=tokenizer,
+    dataset = PreferenceInferenceDataset(model_name=model_name,
+                                         tokenizer=tokenizer,
                                          data=hf_data,
-                                         image_token_len=0 if not use_12b_model else image_token_len,
+                                         image_token_len=image_token_len,
                                          img_processor=image_processor,
                                          use_im_start_end=False)
-    collate_fn = partial(preference_collator_fn, pad_token_id=tokenizer.pad_token_id, use_12b_model=use_12b_model)
+    collate_fn = partial(
+        preference_collator_fn,
+        pad_token_id=tokenizer.pad_token_id,
+        is_omni=("omni" in model_name.lower()))  # judge if the model follow omni structure
     dataloader = torch_data.DataLoader(dataset, batch_size=1, collate_fn=collate_fn,
                                        num_workers=5, shuffle=False, sampler=InferenceSampler(len(dataset)))
 
-    outputs = get_multimodal_sample_logps(model, dataloader, tokenizer,
-                                          is_llava15=True)  # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
+    outputs = get_multimodal_sample_logps(
+        # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
+        model,
+        dataloader,
+        tokenizer,
+        is_llava15=("llava" in model_name.lower() or ("rlaif" in model_name.lower() and "7b" in model_path.lower())))  # judge if the model follow llava structure
 
     world_size = torch.distributed.get_world_size()
     merged_outputs = [[None for _ in range(world_size)] for i in range(len(outputs))]
@@ -208,24 +226,31 @@ def inference_logp(model_path, dataset_path, output_file, use_12b_model=False):
     return df
 
 
-def main(reward_model_path: str, instruct_model_path: str, dataset_path: str, reward_model_output_file: str,
-         instruct_model_output_file: str, use_12b_model=False) -> None:
-    reward_model_output_df = inference_logp(reward_model_path, dataset_path, reward_model_output_file, use_12b_model=use_12b_model)
-    instruct_model_output_df = inference_logp(instruct_model_path, dataset_path, instruct_model_output_file, use_12b_model=use_12b_model)
+def main(
+        reward_model_name: str,
+        reward_model_path: str,
+        instruct_model_name: str,
+        instruct_model_path: str,
+        dataset_path: str,
+        reward_model_output_file: str,
+        instruct_model_output_file: str) -> None:
+    reward_model_output_df = inference_logp(reward_model_name, reward_model_path, dataset_path, reward_model_output_file)
+    instruct_model_output_df = inference_logp(instruct_model_name, instruct_model_path, dataset_path, instruct_model_output_file)
 
     return reward_model_output_df, instruct_model_output_df
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="inference and save the results")
-    parser.add_argument('--reward_model_path', type=str, default="/home/qmli/models/llava_1.5_7b")
-    parser.add_argument('--instruct_model_path', type=str, default="/home/qmli/models/llava_1.5_7b")
-    parser.add_argument('--dataset_path', type=str, default='/home/qmli/RLAIF-V/Refo_test/result/parquet')
-    parser.add_argument('--reward_model_output_file', type=str, default='/home/qmli/RLAIF-V/script_test')
-    parser.add_argument('--instruct_model_output_file', type=str, default='/home/qmli/RLAIF-V/script_test')
-    parser.add_argument('--use_12b_model', action='store_true')
+    parser.add_argument('--reward_model_name', type=str, default="RLAIF-V-7B")
+    parser.add_argument('--reward_model_path', type=str, default="/data/yaoshu/models/RLAIF-V-7B")
+    parser.add_argument('--instruct_model_name', type=str, default="RLAIF-V-12B")
+    parser.add_argument('--instruct_model_path', type=str, default="/data/yaoshu/models/RLAIF-V-12B")
+    parser.add_argument('--dataset_path', type=str, default='/data/yaoshu/dataset/RLAIF-V-Dataset')
+    parser.add_argument('--reward_model_output_file', type=str, default='/data/RLAIF-V-CC/results')
+    parser.add_argument('--instruct_model_output_file', type=str, default='/data/RLAIF-V-CC/results')
     parser.add_argument('--local-rank', type=int, default=0)
     args = parser.parse_args()
 
-    main(args.reward_model_path, args.instruct_model_path, args.dataset_path, args.reward_model_output_file,
-         args.instruct_model_output_file, use_12b_model=args.use_12b_model)
+    main(args.reward_model_name, args.reward_model_path, args.instruct_model_name, args.instruct_model_path, args.dataset_path, args.reward_model_output_file,
+         args.instruct_model_output_file)

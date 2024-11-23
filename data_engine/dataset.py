@@ -5,10 +5,12 @@ import json
 
 from muffin.data.datasets import bytes_to_PIL_image
 from muffin.train.train_utils import encode_multimodal_preference_sample, preprocess_v1
+from omnilmm.train.train_utils import omni_preprocess
 
 
 class PreferenceInferenceDataset(torch_data.Dataset):
     def __init__(self,
+                 model_name,
                  data,
                  tokenizer,
                  image_token_len,
@@ -25,6 +27,12 @@ class PreferenceInferenceDataset(torch_data.Dataset):
         }
         self.tokenizer = tokenizer
 
+        lower_name = model_name.lower()
+        if "onmi" in lower_name or ('rlaif' in lower_name and '12b' in lower_name):
+            self.preprocess_func = omni_preprocess
+        else:
+            self.preprocess_func = partial(preprocess_v1, has_image=True)
+
     def __getitem__(self, index):
         sample = self.data[index]
         metainfo = {
@@ -37,8 +45,8 @@ class PreferenceInferenceDataset(torch_data.Dataset):
         chosen = {'from': 'gpt', 'value': sample['chosen']}
         rejected = {'from': 'gpt', 'value': sample['rejected']}
 
-        # image = bytes_to_PIL_image(sample['image']['bytes'])
-        image = bytes_to_PIL_image(sample['image_bytes'])
+        image = bytes_to_PIL_image(sample['image']['bytes'])
+        # image = bytes_to_PIL_image(sample['image_bytes'])
 
         formated_sample = {
             'image': image,
@@ -48,9 +56,8 @@ class PreferenceInferenceDataset(torch_data.Dataset):
             "idx": sample['idx'],
             "metainfo": metainfo
         }
-        preprocess_func = partial(preprocess_v1, has_image=True)
         rej_data_dict, win_data_dict = encode_multimodal_preference_sample(
-            formated_sample, self.tokenizer, self.mm_cfg, preprocess_func=preprocess_func)
+            formated_sample, self.tokenizer, self.mm_cfg, preprocess_func=self.preprocess_func)
         return rej_data_dict, win_data_dict
 
     def __len__(self):

@@ -65,13 +65,16 @@ def SFT_collator_fn(instances, pad_token_id):
               for instance in instances if 'image' in instance]
     if len(images) > 0:
         # possibly multi-image for each sample
-        if len(images[0].shape) == 4:
-            batch['images'] = images
-        elif all(x is not None and x.shape == images[0].shape for x in images):
-            import numpy
-            if isinstance(images[0], numpy.ndarray):
-                images = [torch.from_numpy(x) for x in images]
-            batch['images'] = torch.stack(images)
+        if hasattr(images[0], 'shape'):
+            if len(images[0].shape) == 4:
+                batch['images'] = images
+            elif all(x is not None and x.shape == images[0].shape for x in images):
+                import numpy
+                if isinstance(images[0], numpy.ndarray):
+                    images = [torch.from_numpy(x) for x in images]
+                batch['images'] = torch.stack(images)
+            else:
+                batch['images'] = images
         else:
             batch['images'] = images
     else:
@@ -340,4 +343,3 @@ def preprocess_v1(
         input_ids=input_ids,
         labels=targets,
     )
-

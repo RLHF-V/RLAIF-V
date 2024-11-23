@@ -11,7 +11,7 @@ class OmniLLMBuilder(ModelBuilder):
     @classmethod
     def judge_able_to_build(cls, model_name: str) -> bool:
         lower_name = model_name.lower()
-        return 'omnillm' in lower_name or ('rlaif' in lower_name and '12b' in lower_name)
+        return 'omnilmm' in lower_name or ('rlaif' in lower_name and '12b' in lower_name)
 
     @classmethod
     def build(cls, model_path, _, model_name, **kwargs):
