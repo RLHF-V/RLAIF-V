@@ -122,7 +122,7 @@ def get_multimodal_sample_logps(model, dataloader, tokenizer, is_llava15=False):
     return win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
 
 
-def write_logp_to_preference_parquet(origin_data, cache_file, logps, overwrite_logps=True):
+def write_logp_to_preference_parquet(origin_data, cache_dir, logps, overwrite_logps=True):
     out_data = []
 
     for index in range(len(logps)):
@@ -151,7 +151,7 @@ def write_logp_to_preference_parquet(origin_data, cache_file, logps, overwrite_l
         for idx, start in enumerate(range(0, len(out_data), step)):
             temp_data = out_data[start: min(start + step, len(out_data))]
             df = pd.DataFrame(temp_data)
-            df.to_parquet(os.path.join(cache_file, f'RLAIF-V-Dataset-withlogp_{idx:03}-{len(temp_data)}.parquet'))
+            df.to_parquet(os.path.join(cache_dir, f'RLAIF-V-Dataset-withlogp_{idx:03}-{len(temp_data)}.parquet'))
 
     torch.distributed.barrier()
     return df
@@ -161,20 +161,17 @@ def inference_logp(
         model_name,
         model_path,
         dataset_path,
-        output_file):
+        output_dir):
     """
     Args:
         model_name:  e.g. llava-v1.5-7, OmniLMM-12B, RLAIF-V-12B
         model_path: path to your model
         dataset_path: path to dataset(should follow RLAIF-V-Dataset format)
-        output_file: path to outputfile(logps)
+        output_dir: path to outputfile(logps)
 
     Returns:
 
     """
-    dist.init_process_group(backend='nccl', world_size=int(os.getenv('WORLD_SIZE', '1')),
-                            rank=int(os.getenv('RANK', '0')), )
-    torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
     tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
                                                                            device_map={"": 'cuda'})
@@ -195,7 +192,8 @@ def inference_logp(
     collate_fn = partial(
         preference_collator_fn,
         pad_token_id=tokenizer.pad_token_id,
-        is_omni=("omni" in model_name.lower()))  # judge if the model follow omni structure
+        is_omni=("omni" in model_name.lower()) or (
+                    "rlaif" in model_name.lower() and "12b" in model_path.lower()))  # judge if the model follow omni structure
     dataloader = torch_data.DataLoader(dataset, batch_size=1, collate_fn=collate_fn,
                                        num_workers=5, shuffle=False, sampler=InferenceSampler(len(dataset)))
 
@@ -204,7 +202,8 @@ def inference_logp(
         model,
         dataloader,
         tokenizer,
-        is_llava15=("llava" in model_name.lower() or ("rlaif" in model_name.lower() and "7b" in model_path.lower())))  # judge if the model follow llava structure
+        is_llava15=("llava" in model_name.lower() or (
+                    "rlaif" in model_name.lower() and "7b" in model_path.lower())))  # judge if the model follow llava structure
 
     world_size = torch.distributed.get_world_size()
     merged_outputs = [[None for _ in range(world_size)] for i in range(len(outputs))]
@@ -218,7 +217,7 @@ def inference_logp(
     logps = list(zip(win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list,
                      rej_per_token_logp_list))
 
-    df = write_logp_to_preference_parquet(dataset.data, output_file, logps, overwrite_logps=True)
+    df = write_logp_to_preference_parquet(dataset.data, output_dir, logps, overwrite_logps=True)
 
     torch.distributed.barrier()
 
@@ -232,25 +231,33 @@ def main(
         instruct_model_name: str,
         instruct_model_path: str,
         dataset_path: str,
-        reward_model_output_file: str,
-        instruct_model_output_file: str) -> None:
-    reward_model_output_df = inference_logp(reward_model_name, reward_model_path, dataset_path, reward_model_output_file)
-    instruct_model_output_df = inference_logp(instruct_model_name, instruct_model_path, dataset_path, instruct_model_output_file)
+        reward_output_dir: str,
+        instruct_output_dir: str):
+    dist.init_process_group(backend='nccl', world_size=int(os.getenv('WORLD_SIZE', '1')),
+                            rank=int(os.getenv('RANK', '0')), )
+    torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
+    _ = inference_logp(instruct_model_name, instruct_model_path, dataset_path, instruct_output_dir)
+    _ = inference_logp(reward_model_name, reward_model_path, dataset_path, reward_output_dir)
 
-    return reward_model_output_df, instruct_model_output_df
+    return {
+        "reward_output_dir": reward_output_dir,
+        "instruct_output_dir": instruct_output_dir
+    }
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="inference and save the results")
+    parser = argparse.ArgumentParser(description="calculate logps for reward and instruct model")
     parser.add_argument('--reward_model_name', type=str, default="RLAIF-V-7B")
     parser.add_argument('--reward_model_path', type=str, default="/data/yaoshu/models/RLAIF-V-7B")
     parser.add_argument('--instruct_model_name', type=str, default="RLAIF-V-12B")
     parser.add_argument('--instruct_model_path', type=str, default="/data/yaoshu/models/RLAIF-V-12B")
     parser.add_argument('--dataset_path', type=str, default='/data/yaoshu/dataset/RLAIF-V-Dataset')
-    parser.add_argument('--reward_model_output_file', type=str, default='/data/RLAIF-V-CC/results')
-    parser.add_argument('--instruct_model_output_file', type=str, default='/data/RLAIF-V-CC/results')
+    parser.add_argument('--reward_model_output_dir', type=str, default='/data/RLAIF-V-CC/results/reward')
+    parser.add_argument('--instruct_model_output_dir', type=str, default='/data/RLAIF-V-CC/results/instruct')
     parser.add_argument('--local-rank', type=int, default=0)
     args = parser.parse_args()
 
-    main(args.reward_model_name, args.reward_model_path, args.instruct_model_name, args.instruct_model_path, args.dataset_path, args.reward_model_output_file,
-         args.instruct_model_output_file)
+    files = main(args.reward_model_name, args.reward_model_path, args.instruct_model_name, args.instruct_model_path,
+                 args.dataset_path, args.reward_model_output_dir,
+                 args.instruct_model_output_dir)
+    print(files)
