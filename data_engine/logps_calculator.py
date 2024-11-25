@@ -1,58 +1,15 @@
 import os
-import json
 import tqdm
-import copy
 import itertools
 import argparse
-import pandas as pd
-import torch.utils.data as torch_data
-from functools import partial
-from muffin.train.train_utils import SFT_collator_fn
-import numpy as np
-import datasets as hf_datasets
-from transformers.image_processing_utils import BatchFeature
-
-from builder.builder import load_pretrained_model
-from muffin.eval.muffin_inference_logp import (get_batch_logps, InferenceSampler, concate_pad)
-from dataset import PreferenceInferenceDataset
+from muffin.eval.muffin_inference_logp import (get_batch_logps, write_logp_to_preference_parquet)
+from util import *
 
 import torch
 import torch.distributed as dist
 
 
-def preference_collator_fn(instances, pad_token_id, is_omni=False):
-    rej_instances, win_instances = list(zip(*instances))
-    rej_batch = SFT_collator_fn(rej_instances, pad_token_id)
-    win_batch = SFT_collator_fn(win_instances, pad_token_id)
-
-    concatenated_input_ids = concate_pad(win_batch['input_ids'], rej_batch['input_ids'], pad_token_id)
-    concatenated_labels = concate_pad(win_batch['labels'], rej_batch['labels'], -100)
-    concatenated_attention_mask = concatenated_input_ids.ne(pad_token_id)
-
-    if not is_omni:
-        if isinstance(win_batch['images'][0], BatchFeature):
-            win_images = torch.stack([torch.tensor(img.pixel_values[0]) for img in win_batch['images']])
-        elif isinstance(win_batch['images'][0], np.ndarray):
-            win_images = torch.stack([torch.tensor(img) for img in win_batch['images']])
-        else:
-            win_images = win_batch['images']
-
-    batch = dict(
-        concatenated_input_ids=concatenated_input_ids,
-        concatenated_labels=concatenated_labels,
-        concatenated_attention_mask=concatenated_attention_mask,
-        win_input_ids=win_batch['input_ids'],
-        rej_input_ids=rej_batch['input_ids'],
-        win_labels=win_batch['labels'],
-        rej_labels=rej_batch['labels'],
-        win_attention_mask=win_batch['attention_mask'],
-        rej_attention_mask=rej_batch['attention_mask'],
-        images=win_batch['images'] if is_omni else win_images,
-    )
-    return batch
-
-
-def get_multimodal_sample_logps(model, dataloader, tokenizer, is_llava15=False):
+def get_multimodal_sample_logps(model, dataloader, is_llava15=False):
     win_logp_list = []
     rej_logp_list = []
 
@@ -122,41 +79,6 @@ def get_multimodal_sample_logps(model, dataloader, tokenizer, is_llava15=False):
     return win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
 
 
-def write_logp_to_preference_parquet(origin_data, cache_dir, logps, overwrite_logps=True):
-    out_data = []
-
-    for index in range(len(logps)):
-        line = origin_data[index]
-        logp_data = {}
-        logp_data['logps'] = logps[index]
-
-        new_line = copy.deepcopy(line)
-
-        if 'logps' in new_line.keys():
-            assert overwrite_logps, 'Found existing logp data, pass overwrite_logps=True to force overwritting'
-            new_line['logps'] = json.dumps(logp_data)
-
-        else:
-            assert (('question' in list(new_line.keys()))
-                    and ('chosen' in list(new_line.keys()))
-                    and ('rejected' in list(new_line.keys()))), \
-                f'Undefined data structure, expecting [Q, Win, Rej] in keys, got {new_line.keys()}'
-            new_line['logps'] = json.dumps(logp_data)
-
-        out_data.append(new_line)
-
-    # df = none
-    if torch.distributed.get_rank() == 0:
-        step = 5000
-        for idx, start in enumerate(range(0, len(out_data), step)):
-            temp_data = out_data[start: min(start + step, len(out_data))]
-            df = pd.DataFrame(temp_data)
-            df.to_parquet(os.path.join(cache_dir, f'RLAIF-V-Dataset-withlogp_{idx:03}-{len(temp_data)}.parquet'))
-
-    torch.distributed.barrier()
-    return df
-
-
 def inference_logp(
         model_name,
         model_path,
@@ -173,37 +95,14 @@ def inference_logp(
 
     """
 
-    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
-                                                                           device_map={"": 'cuda'})
-    image_token_len = 0
-    if hasattr(model, "model") and hasattr(model.model, "config") and hasattr(model.model.config, "num_query"):
-        image_token_len = model.model.config.num_query
-
-    model = model.to(dtype=torch.bfloat16, device='cuda')
-    hf_data = hf_datasets.load_dataset(dataset_path, cache_dir='./cache')['train'].cast_column("image",
-                                                                                               hf_datasets.Image(
-                                                                                                   decode=False))
-    dataset = PreferenceInferenceDataset(model_name=model_name,
-                                         tokenizer=tokenizer,
-                                         data=hf_data,
-                                         image_token_len=image_token_len,
-                                         img_processor=image_processor,
-                                         use_im_start_end=False)
-    collate_fn = partial(
-        preference_collator_fn,
-        pad_token_id=tokenizer.pad_token_id,
-        is_omni=("omni" in model_name.lower()) or (
-                    "rlaif" in model_name.lower() and "12b" in model_path.lower()))  # judge if the model follow omni structure
-    dataloader = torch_data.DataLoader(dataset, batch_size=1, collate_fn=collate_fn,
-                                       num_workers=5, shuffle=False, sampler=InferenceSampler(len(dataset)))
+    model, dataset, dataloader = load_model_and_dataloader(model_path, model_name, dataset_path)
 
     outputs = get_multimodal_sample_logps(
         # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
         model,
         dataloader,
-        tokenizer,
         is_llava15=("llava" in model_name.lower() or (
-                    "rlaif" in model_name.lower() and "7b" in model_path.lower())))  # judge if the model follow llava structure
+                "rlaif" in model_name.lower() and "7b" in model_path.lower())))  # judge if the model follow llava structure
 
     world_size = torch.distributed.get_world_size()
     merged_outputs = [[None for _ in range(world_size)] for i in range(len(outputs))]
@@ -233,9 +132,6 @@ def main(
         dataset_path: str,
         reward_output_dir: str,
         instruct_output_dir: str):
-    dist.init_process_group(backend='nccl', world_size=int(os.getenv('WORLD_SIZE', '1')),
-                            rank=int(os.getenv('RANK', '0')), )
-    torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
     _ = inference_logp(instruct_model_name, instruct_model_path, dataset_path, instruct_output_dir)
     _ = inference_logp(reward_model_name, reward_model_path, dataset_path, reward_output_dir)
 
@@ -254,8 +150,11 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_path', type=str, default='/data/yaoshu/dataset/RLAIF-V-Dataset')
     parser.add_argument('--reward_model_output_dir', type=str, default='/data/RLAIF-V-CC/results/reward')
     parser.add_argument('--instruct_model_output_dir', type=str, default='/data/RLAIF-V-CC/results/instruct')
-    parser.add_argument('--local-rank', type=int, default=0)
     args = parser.parse_args()
+
+    dist.init_process_group(backend='nccl', world_size=int(os.getenv('WORLD_SIZE', '1')),
+                            rank=int(os.getenv('RANK', '0')), )
+    torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
     files = main(args.reward_model_name, args.reward_model_path, args.instruct_model_name, args.instruct_model_path,
                  args.dataset_path, args.reward_model_output_dir,

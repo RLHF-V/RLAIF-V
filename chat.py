@@ -61,33 +61,47 @@ class RLAIFV12B:
         self.tokenizer = tokenizer
         self.model.eval()
 
-    def decode(self, image, input_ids):
+    def decode(self, image, input_ids, param=None):
         with torch.inference_mode():
-            output = self.model.generate_vllm(
-                input_ids=input_ids.unsqueeze(0).cuda(),
-                images=image.unsqueeze(0).half().cuda(),
-                temperature=0.6,
-                max_new_tokens=1024,
-                num_beams=3,
-                do_sample=True,
-                output_scores=True,
-                return_dict_in_generate=True,
-                repetition_penalty=1.1,
-                top_k=30,
-                top_p=0.9,
-            )
+            if param is None:
+                output = self.model.generate_vllm(
+                    input_ids=input_ids.unsqueeze(0).cuda(),
+                    images=image.unsqueeze(0).half().cuda(),
+                    temperature=0.6,
+                    max_new_tokens=1024,
+                    num_beams=3,
+                    do_sample=True,
+                    output_scores=True,
+                    return_dict_in_generate=True,
+                    repetition_penalty=1.1,
+                    top_k=30,
+                    top_p=0.9,
+                )
+            else:
+                output = self.model.generate_vllm(
+                    input_ids=input_ids.unsqueeze(0).cuda(),
+                    images=image.unsqueeze(0).half().cuda(),
+                    max_new_tokens=1024,
+                    output_scores=True,
+                    return_dict_in_generate=True,
+                    **param
+                )
 
             response = self.tokenizer.decode(
                 output.sequences[0], skip_special_tokens=True)
             response = response.strip()
             return response
 
-    def chat(self, input):
-        im_64 = img2base64(input['image'])
+    def chat(self, input, param=None):
+        if isinstance(input['image'], str):
+            im_64 = img2base64(input['image'])
         msgs = json.dumps([{"role": "user", "content": input['question']}])
 
         try:
-            image = Image.open(io.BytesIO(base64.b64decode(im_64))).convert('RGB')
+            if isinstance(input['image'], str):
+                image = Image.open(io.BytesIO(base64.b64decode(im_64))).convert('RGB')
+            else:
+                image = input['image']
         except Exception as e:
             return "Image decode error"
 
@@ -97,7 +111,7 @@ class RLAIFV12B:
         input_ids = torch.as_tensor(input_ids)
         image = self.image_transform(image)
 
-        out = self.decode(image, input_ids)
+        out = self.decode(image, input_ids, param=param)
 
         return out
 
@@ -119,14 +133,17 @@ class RLAIFV7B:
         self.image_processor = image_processor
         self.context_len = context_len
 
-    def chat(self, input):
+    def chat(self, input, param=None):
         msgs = input['question']
         if self.model.config.mm_use_im_start_end:
             msgs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n' + msgs
         else:
             msgs = DEFAULT_IMAGE_TOKEN + '\n' + msgs
 
-        image = Image.open(input['image']).convert('RGB')
+        if isinstance(input['image'], str):
+            image = Image.open(input['image']).convert('RGB')
+        else:
+            image = input['image']
         conv = conv_templates["llava_v1"].copy()
         conv.append_message(conv.roles[0], msgs)
         conv.append_message(conv.roles[1], None)
@@ -136,15 +153,25 @@ class RLAIFV7B:
             0).cuda()
         image_tensor = process_images([image], self.image_processor, self.model.config)[0]
         with torch.inference_mode():
-            output_ids = self.model.generate(
-                input_ids,
-                images=image_tensor.unsqueeze(0).half().cuda(),
-                image_sizes=[image.size],
-                do_sample=False,
-                temperature=0,
-                num_beams=3,
-                max_new_tokens=1024,
-                use_cache=True)
+            if param is None:
+                output_ids = self.model.generate(
+                    input_ids,
+                    images=image_tensor.unsqueeze(0).half().cuda(),
+                    image_sizes=[image.size],
+                    do_sample=False,
+                    temperature=0,
+                    num_beams=3,
+                    max_new_tokens=1024,
+                    use_cache=True)
+            else:
+                output_ids = self.model.generate(
+                    input_ids,
+                    images=image_tensor.unsqueeze(0).half().cuda(),
+                    image_sizes=[image.size],
+                    max_new_tokens=1024,
+                    use_cache=True,
+                    **param
+                )
         outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
         return outputs
 
@@ -156,8 +183,8 @@ class RLAIFVChat:
         else:
             self.model = RLAIFV7B(model_path)
 
-    def chat(self, input):
-        return self.model.chat(input)
+    def chat(self, input, param=None):
+        return self.model.chat(input, param=param)
 
 
 if __name__ == '__main__':

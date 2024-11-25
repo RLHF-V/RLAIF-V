@@ -37,16 +37,20 @@ class PreferenceInferenceDataset(torch_data.Dataset):
         sample = self.data[index]
         metainfo = {
             "origin_dataset": sample['origin_dataset'],
-            "origin_split": json.loads(sample['origin_split']),
             "origin_idx": sample['idx'],
             "image_id": sample['image_path'],
         }
+        if sample['origin_split'] is not None and sample['origin_split'] != "":
+            metainfo["origin_split"] = json.loads(sample['origin_split'])
+        else:
+            metainfo["origin_split"] = ""
+
         question = {'from': 'human', 'value': f"<image>\n{sample['question']}"}
         chosen = {'from': 'gpt', 'value': sample['chosen']}
         rejected = {'from': 'gpt', 'value': sample['rejected']}
 
         image = bytes_to_PIL_image(sample['image']['bytes'])
-        # image = bytes_to_PIL_image(sample['image_bytes'])
+        # image = bytes_to_PIL_image(sample['image_bytes']['bytes'])
 
         formated_sample = {
             'image': image,

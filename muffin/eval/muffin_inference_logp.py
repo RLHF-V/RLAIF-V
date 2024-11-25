@@ -312,7 +312,8 @@ def write_logp_to_preference_parquet(origin_data, cache_file, logps, overwrite_l
 
     torch.distributed.barrier()
 
-    return df
+    if torch.distributed.get_rank() == 0:
+        return df
 
 def inference_logp(model, tokenizer, hf_data, cache_file, image_token_len, img_processor, use_im_start_end, is_llava15=False):
     model = model.to(dtype=torch.bfloat16, device='cuda')
