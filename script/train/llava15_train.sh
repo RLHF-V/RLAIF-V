@@ -1,12 +1,13 @@
 export PYTHONPATH=$PYTHONPATH:`realpath .`
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 
 task_name=llava15_7b_DPO
 exp_name=llava15_rlaifv
 
 deepspeed ./muffin/train/train_llava15.py \
     --deepspeed ./script/zero2.json  \
-    --model_name_or_path liuhaotian/llava-v1.5-7b \
-    --data_dir ./RLAIF-V-Dataset_logps/ \
+    --model_name_or_path /data/yaoshu/models/llava-v1.5-7b \
+    --data_dir /data/RLAIF-V-CC/results/test/dataset/ \
     --image_folder not_used \
     --vision_tower openai/clip-vit-large-patch14-336 \
     --mm_use_im_start_end False \

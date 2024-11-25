@@ -10,6 +10,7 @@ import torch.utils.data as torch_data
 import PIL.Image as PIL_image
 from functools import partial
 from muffin.train.train_utils import encode_multimodal_preference_sample, SFT_collator_fn, preprocess_v1
+from muffin.utils import load_attr_or_empty_str
 
 
 def bytes_to_PIL_image(img_buffer):
@@ -135,11 +136,12 @@ class PreferenceInferenceDataset(torch_data.Dataset):
 
     def __getitem__(self, index):
         sample = self.data[index]
+        origin_split = load_attr_or_empty_str(sample, 'origin_split')
         metainfo = {
-            "origin_dataset": sample['origin_dataset'],
-            "origin_split": json.loads(sample['origin_split']),
-            "origin_idx": sample['idx'],
-            "image_id": sample['image_path'],
+            "origin_dataset": load_attr_or_empty_str(sample, 'origin_dataset'),
+            "origin_split": json.loads(origin_split) if origin_split != "" else origin_split,
+            "origin_idx": load_attr_or_empty_str(sample, 'idx'),
+            "image_id": load_attr_or_empty_str(sample, 'image_path'),
         }
         question = {'from': 'human', 'value': f"<image>\n{sample['question']}"}
         chosen = {'from': 'gpt', 'value': sample['chosen']}

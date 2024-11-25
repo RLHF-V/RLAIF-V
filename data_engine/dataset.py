@@ -5,6 +5,7 @@ import json
 
 from muffin.data.datasets import bytes_to_PIL_image
 from muffin.train.train_utils import encode_multimodal_preference_sample, preprocess_v1
+from muffin.utils import load_attr_or_empty_str
 from omnilmm.train.train_utils import omni_preprocess
 
 
@@ -36,9 +37,9 @@ class PreferenceInferenceDataset(torch_data.Dataset):
     def __getitem__(self, index):
         sample = self.data[index]
         metainfo = {
-            "origin_dataset": sample['origin_dataset'],
+            "origin_dataset": load_attr_or_empty_str(sample, 'origin_dataset'),
             "origin_idx": sample['idx'],
-            "image_id": sample['image_path'],
+            "image_id": load_attr_or_empty_str(sample, 'image_path'),
         }
         if sample['origin_split'] is not None and sample['origin_split'] != "":
             metainfo["origin_split"] = json.loads(sample['origin_split'])

@@ -18,11 +18,15 @@ from muffin.data.data_processors import register_data_processor
 from muffin.eval.muffin_inference_logp import inference_logp
 import datasets as hf_datasets
 
+from muffin.utils import load_attr_or_empty_str
+
+
 def bytes_to_PIL_image(img_buffer):
     img_io = io.BytesIO(img_buffer)
     img_io.seek(0)
     image = Image.open(img_io).convert('RGB')
     return image
+
 
 class RLAIFVDataset(torch_data.Dataset):
     def __init__(self, data_dir: str, reference_model=None,
@@ -31,25 +35,43 @@ class RLAIFVDataset(torch_data.Dataset):
 
         if not op.exists(data_dir):
             os.makedirs(data_dir, exist_ok=True)
+        if not op.exists(op.join(data_dir, "logps")):
+            os.makedirs(op.join(data_dir, "logps"), exist_ok=True)
 
-        data_path = [file for file in os.listdir(data_dir) if file.endswith('.parquet') and 'logp' in file]
+        logps_sub_dir = False
+        logps_data_path = [file for file in os.listdir(data_dir) if file.endswith('.parquet') and 'logp' in file]
+        if len(logps_data_path) == 0 and op.exists(op.join(data_dir, "logps")):
+            logps_data_path = [file for file in os.listdir(op.join(data_dir, "logps")) if
+                               file.endswith('.parquet') and 'logp' in file]
+            logps_sub_dir = True
         self.data_path = data_dir
 
-        if len(data_path) == 0:
+        if len(logps_data_path) == 0:
             assert reference_model is not None, "`reference_model` is mandatory when logps do not exist."
 
+            origin_data_path = [file for file in os.listdir(data_dir) if
+                                file.endswith('.parquet') and 'logp' not in file]
             if not op.exists('./RLAIF-V-Dataset'):
                 os.mkdir('./RLAIF-V-Dataset')
-            hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+            if len(origin_data_path) == 0:
+                hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')[
+                    'train'].cast_column("image", hf_datasets.Image(decode=False))
+            else:
+                hf_data = hf_datasets.load_dataset(data_dir,
+                                                   cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image",
+                                                                                                       hf_datasets.Image(
+                                                                                                           decode=False))
 
-            inference_logp(reference_model, tokenizer, hf_data, self.data_path,
-                            image_token_len, img_processor, use_im_start_end, is_llava15=is_llava15)
+            inference_logp(reference_model, tokenizer, hf_data, op.join(data_dir, "logps"),
+                           image_token_len, img_processor, use_im_start_end, is_llava15=is_llava15)
 
             torch.distributed.barrier()
 
-            self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+            self.data = hf_datasets.load_dataset(op.join(data_dir, "logps"))['train'].cast_column("image",
+                                                                                hf_datasets.Image(decode=False))
         else:
-            self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+            self.data = hf_datasets.load_dataset(op.join(data_dir, "logps") if logps_sub_dir else data_dir)['train'].cast_column("image",
+                                                                                hf_datasets.Image(decode=False))
 
         self.line_idx = list(range(len(self.data)))
         random.shuffle(self.line_idx)
@@ -66,10 +88,10 @@ class RLAIFVDataset(torch_data.Dataset):
         image = bytes_to_PIL_image(sample['image']['bytes'])
 
         metainfo = {
-            "origin_dataset": sample['origin_dataset'],
-            "origin_split": sample['origin_split'],
-            "origin_idx": sample['idx'],
-            "image_id": sample['image_path'],
+            "origin_dataset": load_attr_or_empty_str(sample, 'origin_dataset'),
+            "origin_split": load_attr_or_empty_str(sample, 'origin_split'),
+            "origin_idx": load_attr_or_empty_str(sample, 'idx'),
+            "image_id": load_attr_or_empty_str(sample, 'image_path'),
         }
 
         data_dict = {
@@ -77,17 +99,18 @@ class RLAIFVDataset(torch_data.Dataset):
             "question": question,
             "chosen": chosen,
             "rejected": rejected,
-            "idx": sample['idx'],
+            "idx": load_attr_or_empty_str(sample, 'idx'),
             "metainfo": metainfo
         }
-        logps=json.loads(sample['logps'])
+        logps = json.loads(sample['logps'])
 
         if type(logps) == type([]):
             (data_dict['ref_win_logp'], data_dict['ref_win_avg_logp'], data_dict['ref_win_per_token_logp'],
-            data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps
+             data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps
         else:
             (data_dict['ref_win_logp'], data_dict['ref_win_avg_logp'], data_dict['ref_win_per_token_logp'],
-            data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps['logps']
+             data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps[
+                'logps']
 
         return data_dict
 
@@ -285,4 +308,3 @@ class MultiDataSourceDataset(torch_data.Dataset):
 
     def __len__(self):
         return self.size
-

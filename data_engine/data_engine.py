@@ -93,7 +93,7 @@ def run(
             print_stage(2.3, finish=True)
 
             print_stage(2.4, "Save file to dataset format")
-            output_file = os.path.join(work_dir, "dpo_dataset.parquet")
+            output_file = os.path.join(work_dir, "dataset", "dpo_dataset.parquet")
             if os.path.exists(output_file):
                 os.remove(output_file)
             needed_keys = [
@@ -117,6 +117,7 @@ def run(
             print_stage(2, finish=True)
 
             print("Finish all stages, output file is saved to ", output_file)
+            print("You can directly copy this path to the training script to replace --data_dir value")
             print("Have a nice day!")
 
 if __name__ == "__main__":
