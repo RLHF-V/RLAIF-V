@@ -55,7 +55,7 @@ non_lora_trainables="$parent_dir/non_lora_trainables.bin"
 for dir in "$parent_dir"/checkpoint-*; do
     if [ -d "$dir" ]; then
         base_name=$(basename "$dir")
-        new_name=${base_name/checkpoint-/lora_checkpoint-}
+        new_name=${base_name/checkpoint-/RLAIFV7B-lora_checkpoint-}
         new_dir="$parent_dir/$new_name"
 
         mv "$dir" "$new_dir"

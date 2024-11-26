@@ -190,15 +190,15 @@ If you already downloaded the dataset, you can replace 'openbmb/RLAIF-V-Dataset'
 
 Here, we provide a training script to train the model in **1 iteration**. The `max_step` parameter should be adjusted according to the amount of your data.
 
-- **Fully parameters**
+- **Fully Fine-tuning**
   
-Run the following command to start non-lora training.
+Run the following command to start fully fine-tuning.
 
 ```bash
 bash ./script/train/llava15_train.sh
 ```
 
-- **Lora**
+- **LoRA**
 
 Run the following command to start lora training.
 
