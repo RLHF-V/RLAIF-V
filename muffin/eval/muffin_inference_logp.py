@@ -312,8 +312,6 @@ def write_logp_to_preference_parquet(origin_data, cache_file, logps, overwrite_l
 
     torch.distributed.barrier()
 
-    return df
-
 def inference_logp(model, tokenizer, hf_data, cache_file, image_token_len, img_processor, use_im_start_end, is_llava15=False):
     model = model.to(dtype=torch.bfloat16, device='cuda')
     dataset = PreferenceInferenceDataset(tokenizer=tokenizer,
@@ -339,9 +337,8 @@ def inference_logp(model, tokenizer, hf_data, cache_file, image_token_len, img_p
 
     logps = list(zip(win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list))
 
-    df = write_logp_to_preference_parquet(dataset.data, cache_file, logps, overwrite_logps=False)
+    write_logp_to_preference_parquet(dataset.data, cache_file, logps, overwrite_logps=False)
 
     torch.distributed.barrier()
 
     del model
-    return df
