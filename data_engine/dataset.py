@@ -8,6 +8,8 @@ from muffin.train.train_utils import encode_multimodal_preference_sample, prepro
 from muffin.utils import load_attr_or_empty_str
 from omnilmm.train.train_utils import omni_preprocess
 
+import util
+
 
 class PreferenceInferenceDataset(torch_data.Dataset):
     def __init__(self,
@@ -28,8 +30,7 @@ class PreferenceInferenceDataset(torch_data.Dataset):
         }
         self.tokenizer = tokenizer
 
-        lower_name = model_name.lower()
-        if "onmi" in lower_name or ('rlaif' in lower_name and '12b' in lower_name):
+        if util.judge_is_omnilmm(model_name):
             self.preprocess_func = omni_preprocess
         else:
             self.preprocess_func = partial(preprocess_v1, has_image=True)

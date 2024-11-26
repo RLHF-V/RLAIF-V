@@ -15,11 +15,11 @@ DISTRIBUTED_ARGS="
     --master_port $MASTER_PORT
 "
 torchrun $DISTRIBUTED_ARGS data_engine/data_engine.py \
-      --reward_model_name RLAIF-V-7B \
-      --reward_model_path /data/yaoshu/models/RLAIF-V-7B \
-      --instruct_model_name llava-v1.5-7b \
-      --instruct_model_path /data/yaoshu/models/llava-v1.5-7b \
-      --dataset_path /data/yaoshu/dataset/origin_dataset \
-      --work_dir /data/RLAIF-V-CC/results/test1 \
-      --image_column image_bytes \
+      --reward_model_name reward model name \
+      --reward_model_path /path/to/your/reward/model \
+      --instruct_model_name instruct model name \
+      --instruct_model_path /path/to/yout/instruct/model \
+      --dataset_path /path/to/your/dataset \
+      --work_dir /path/to/your/work/dir \
+      --image_column image \
       --continue_from_stage 0

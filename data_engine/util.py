@@ -69,3 +69,11 @@ def load_model_and_dataloader(model_path, model_name, dataset_path):
     dataloader = torch_data.DataLoader(dataset, batch_size=1, collate_fn=collate_fn,
                                        num_workers=5, shuffle=False, sampler=InferenceSampler(len(dataset)))
     return model, dataset, dataloader
+
+def judge_is_llava(model_name: str) -> bool:
+    lower_name = model_name.lower()
+    return 'llava' in lower_name or ('rlaif' in lower_name and '7b' in lower_name)
+
+def judge_is_omnilmm(model_name: str) -> bool:
+    lower_name = model_name.lower()
+    return 'omnilmm' in lower_name or ('rlaif' in lower_name and '12b' in lower_name)

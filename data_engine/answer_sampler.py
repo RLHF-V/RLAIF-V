@@ -120,7 +120,6 @@ def sample_answer(model_path, dataset_path, output_path, image_column, sample=10
                     samples = sorted(grouped_output_data[data_id], key=lambda x: x['sample_index'])
                     flat_output_data.extend(samples)
 
-                # 分批保存数据时保持顺序
                 for idx, start in enumerate(range(0, len(flat_output_data), step)):
                     try:
                         temp_data = flat_output_data[start: min(start + step, len(flat_output_data))]
@@ -161,7 +160,6 @@ def main():
     try:
         sample_answer(model_path, dataset_path, output_path, sample)
     finally:
-        # 清理分布式环境
         dist.destroy_process_group()
 
 

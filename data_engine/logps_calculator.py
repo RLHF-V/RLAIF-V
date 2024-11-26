@@ -86,7 +86,7 @@ def inference_logp(
         output_dir):
     """
     Args:
-        model_name:  e.g. llava-v1.5-7, OmniLMM-12B, RLAIF-V-12B
+        model_name:  e.g. llava-v1.5-7B, OmniLMM-12B, RLAIF-V-12B
         model_path: path to your model
         dataset_path: path to dataset(should follow RLAIF-V-Dataset format)
         output_dir: path to outputfile(logps)
@@ -101,8 +101,7 @@ def inference_logp(
         # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
         model,
         dataloader,
-        is_llava15=("llava" in model_name.lower() or (
-                "rlaif" in model_name.lower() and "7b" in model_path.lower())))  # judge if the model follow llava structure
+        is_llava15=judge_is_llava(model_name))  # judge if the model follow llava structure
 
     world_size = torch.distributed.get_world_size()
     merged_outputs = [[None for _ in range(world_size)] for i in range(len(outputs))]
