@@ -160,7 +160,14 @@ In the picture, a car stopped on the road due to the presence of a sheep on the 
 2. 开始训练
 运行以下命令开始训练。
 
+- **全参数训练**
 ```bash
+bash ./script/train/llava15_train.sh
+```
+
+- **LoRA训练**
+```bash
+pip install peft
 bash ./script/train/llava15_train.sh
 ```
 
