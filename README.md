@@ -190,12 +190,22 @@ If you already downloaded the dataset, you can replace 'openbmb/RLAIF-V-Dataset'
 
 Here, we provide a training script to train the model in **1 iteration**. The `max_step` parameter should be adjusted according to the amount of your data.
 
-Run the following command to start training.
+- **Fully parameters**
+  
+Run the following command to start non-lora training.
 
 ```bash
 bash ./script/train/llava15_train.sh
 ```
 
+- **Lora**
+
+Run the following command to start lora training.
+
+```bash
+pip install peft 
+bash ./script/train/llava15_train_lora.sh
+```
 3. Iterative alignment
 
 To reproduce the iterative training process in the paper, you need to do the following steps for 4 times:
