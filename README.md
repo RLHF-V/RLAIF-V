@@ -21,6 +21,7 @@
 
 ## 🎊 News <!-- omit in toc -->
 
+- [2024.11.26] 🚀 We support [LoRA](https://github.com/RLHF-V/RLAIF-V?tab=readme-ov-file#train) training now!
 - [2024.05.28] 📃 Our paper is accesible at [arXiv](https://arxiv.org/abs/2405.17220) now!
 - [2024.05.20] 🔥 Our [RLAIF-V-Dataset](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset) is used for training [MiniCPM-Llama3-V 2.5](https://huggingface.co/openbmb/MiniCPM-Llama3-V-2_5), which represents the first end-side  GPT-4V level MLLM!
 - [2024.05.20] We open-source the code, weights ([7B](https://huggingface.co/openbmb/RLAIF-V-7B), [12B](https://huggingface.co/openbmb/RLAIF-V-12B)) and [data](https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset) of RLAIF-V!
