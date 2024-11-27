@@ -168,7 +168,7 @@ bash ./script/train/llava15_train.sh
 - **LoRA训练**
 ```bash
 pip install peft
-bash ./script/train/llava15_train.sh
+bash ./script/train/llava15_train_lora.sh
 ```
 
 ## 评估
