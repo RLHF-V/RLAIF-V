@@ -26,17 +26,19 @@ def sample_answer(model_path, dataset_path, output_path, image_column, sample=10
 
         with torch.inference_mode():
             generation_config = {
-                "top_p": 0.8,
-                "top_k": 100,
+                # "top_p": 0.8,
+                # "top_k": 100,
                 "temperature": 0.7,
                 "do_sample": True,
-                "repetition_penalty": 1.05
+                # "repetition_penalty": 1.05
             }
 
+            print("Loading sample answer dataset.")
             dataset = load_dataset(dataset_path, cache_dir='./cache')['train'].cast_column(
                 image_column,
                 hf_datasets.Image(decode=False)
             )
+            print("Finish loading")
 
             total_size = len(dataset)
             base_size = total_size // world_size

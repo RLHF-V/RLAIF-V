@@ -50,7 +50,7 @@ def main(data):
 
     # you can add your own filters here or delete the filters
     # that are determined to be unnecessary
-    filters = [LengthFilter, NumFilter, DeleteSameFilter]
+    filters = [NumFilter, LengthFilter, DeleteSameFilter]
 
     for filter_to_run in filters:
         filter_name = filter_to_run.__name__

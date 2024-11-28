@@ -12,14 +12,14 @@ def get_ranking_reward_data(sample_k, rewards):
     data = list(rewards)
     data_pairs = [data[i:i + sample_k] for i in range(0, len(data), sample_k)]
 
-    # print(len(data_pairs))
-    # print("*****")
-
     # 对于每组数据对进行排序和逐行写入
     for data in tqdm(data_pairs):
         # 按照 sum 和 avg 降序排列
         sum_sorted_data = sorted(data, key=lambda x: x['sum'], reverse=True)
         avg_sorted_data = sorted(data, key=lambda x: x['avg'], reverse=True)
+        # TODO
+        # sum_sorted_data = sorted(data, key=lambda x: x['sum'])
+        # avg_sorted_data = sorted(data, key=lambda x: x['avg'])
 
         # print(sum_sorted_data[0]['idx'])
 
@@ -62,7 +62,8 @@ def get_ranking_reward_data(sample_k, rewards):
     return sum_output, avg_output
 
 
-def pair_union(sum_reward, avg_reward, sample_k=10, rank=10, distance=5):
+def pair_union(sum_reward, avg_reward, sample_k=10, rank=3, distance=25):
+    print(f"sampling number k: {sample_k} \nrank number: {rank} \ndistance: {distance}")
     total_pairs = 0
     total_used_pic = 0
     flag = 0
@@ -124,11 +125,11 @@ def pair_union(sum_reward, avg_reward, sample_k=10, rank=10, distance=5):
                         flag += 1
         if sign == 1:
             total_used_pic += 1
-
+    print(f"total_used_pic: {total_used_pic}")
     return dpo_pair
 
 
-def main(rewards, sample_k=10, rank=10, distance=5):
+def main(rewards, sample_k=10, rank=3, distance=25):
     sum_output, avg_output = get_ranking_reward_data(sample_k, rewards)
     dpo_pair = pair_union(sum_output, avg_output, sample_k, rank, distance)
     return dpo_pair

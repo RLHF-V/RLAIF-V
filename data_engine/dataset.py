@@ -42,7 +42,7 @@ class PreferenceInferenceDataset(torch_data.Dataset):
             "origin_idx": sample['idx'],
             "image_id": load_attr_or_empty_str(sample, 'image_path'),
         }
-        if sample['origin_split'] is not None and sample['origin_split'] != "":
+        if 'origin_split' in sample and sample['origin_split'] != "":
             metainfo["origin_split"] = json.loads(sample['origin_split'])
         else:
             metainfo["origin_split"] = ""

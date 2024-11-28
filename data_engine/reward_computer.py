@@ -7,6 +7,8 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 import argparse
 
+from muffin.utils import load_attr_or_empty_str
+
 
 # def parquet_to_json(parquet_file, jsonl_file):
 #     df = pd.read_parquet(parquet_file, engine='pyarrow')
@@ -111,13 +113,13 @@ def compute_reward(tokenizer, reward_logps_dir, instruct_logps_dir):
 
             reward_data = {
                 "idx": idx,
-                "ds_name": reward_row["ds_name"],
+                "ds_name": load_attr_or_empty_str(reward_row, "ds_name"),
                 "question": reward_row["question"],
                 "chosen": reward_row["chosen"],
                 "image": reward_row["image"],
-                "image_path": reward_row["image_path"],
-                "origin_split": reward_row["origin_split"],
-                "origin_dataset": reward_row["origin_dataset"],
+                "image_path": load_attr_or_empty_str(reward_row, "image_path"),
+                "origin_split": load_attr_or_empty_str(reward_row, "origin_split"),
+                "origin_dataset": load_attr_or_empty_str(reward_row, "origin_dataset"),
                 "min": min_reward,
                 "sum": sum_reward,
                 "ORM": last_reward,
