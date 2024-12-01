@@ -14,11 +14,6 @@ class NumFilter(Filter):
         return len(words)
 
     @classmethod
-    def calculate_mean_difference(cls, data):
-        total_difference = sum(item['chosen_diff'] for item in data)
-        return total_difference / len(data)
-
-    @classmethod
     def do_filter(cls, data):
         count = {}
         sign = 0  # caption数据个数

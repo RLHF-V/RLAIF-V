@@ -9,6 +9,8 @@ import pandas as pd
 import torch.utils.data as torch_data
 import PIL.Image as PIL_image
 from functools import partial
+
+from muffin.gen_data_util import InferenceSampler
 from muffin.train.train_utils import encode_multimodal_preference_sample, SFT_collator_fn, preprocess_v1
 from muffin.utils import load_attr_or_empty_str
 
@@ -51,33 +53,6 @@ def get_batch_logps_minicpm(logits: torch.FloatTensor, labels: torch.LongTensor,
         return per_token_logps, log_prob, average_log_prob
 
     return log_prob, average_log_prob
-
-
-class InferenceSampler(torch.utils.data.sampler.Sampler):
-
-    def __init__(self, size):
-        self._size = int(size)
-        assert size > 0
-        self._rank = torch.distributed.get_rank()
-        self._world_size = torch.distributed.get_world_size()
-        self._local_indices = self._get_local_indices(size, self._world_size,
-                                                      self._rank)
-
-    @staticmethod
-    def _get_local_indices(total_size, world_size, rank):
-        shard_size = total_size // world_size
-        left = total_size % world_size
-        shard_sizes = [shard_size + int(r < left) for r in range(world_size)]
-
-        begin = sum(shard_sizes[:rank])
-        end = min(sum(shard_sizes[:rank + 1]), total_size)
-        return range(begin, end)
-
-    def __iter__(self):
-        yield from self._local_indices
-
-    def __len__(self):
-        return len(self._local_indices)
 
 
 def get_batch_logps(logits: torch.FloatTensor, labels: torch.LongTensor, return_per_token_logp=False, return_all=False, tokenizer=None) -> torch.FloatTensor:
@@ -210,9 +185,7 @@ def preference_collator_fn(instances, pad_token_id):
     return batch
 
 
-
-
-def get_multimodal_sample_logps(model, dataloader, tokenizer, is_llava15=False):
+def get_multimodal_sample_logps(model, dataloader, is_llava15=False):
     win_logp_list = []
     rej_logp_list = []
 
@@ -328,7 +301,7 @@ def inference_logp(model, tokenizer, hf_data, cache_file, image_token_len, img_p
     dataloader = torch_data.DataLoader(dataset, batch_size=1, collate_fn=collate_fn,
                                        num_workers=5, shuffle=False, sampler=InferenceSampler(len(dataset)))
 
-    outputs = get_multimodal_sample_logps(model, dataloader, tokenizer, is_llava15=is_llava15) # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
+    outputs = get_multimodal_sample_logps(model, dataloader, is_llava15=is_llava15) # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
 
     world_size = torch.distributed.get_world_size()
     merged_outputs = [[None for _ in range(world_size)] for i in range(len(outputs))]

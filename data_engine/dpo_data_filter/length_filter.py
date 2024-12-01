@@ -31,8 +31,8 @@ class LengthFilter(Filter):
         print("finish sorting")
         print("mean difference: ", cls.calculate_mean_difference(data))
 
+        print("popping data to reduce mean difference...")
         while cls.calculate_mean_difference(data) > 0.5:
-            print("pop data to reduce mean difference")
             data.pop()
         for item in data:
             del item['chosen_diff']

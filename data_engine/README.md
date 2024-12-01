@@ -8,14 +8,15 @@ You only need to input the reward model, instruction model, and your dataset, an
 ## Usage
 Please refer to the `run_engine.sh` script.
 
-You will need to provide the path and name for both the reward model and the instruction model. Currently, we support the following models: llava-1.5-7b, RLAIF-V-7B, OmniLMM-12B, and RLAIF-V-12B. We are considering adding more models in the future. If the model you wish to use is not listed, you may need to implement the corresponding code yourself (for model loading, add code to `RLAIF-V/builder`; for data formatting, change `RLAIF-V/muffin/train/train_utils.py` and `RLAIF-V/data_engine/util.py`; for log probability calculation, change `RLAIF-V/data_engine/logps_calculator.py` and `RLAIF-V/muffin/eval/muffin_inference_logp.py`).
+You will need to provide the path and name for both the reward model and the instruction model. Currently, we support the following models: llava-1.5-7b, RLAIF-V-7B, OmniLMM-12B, and RLAIF-V-12B. We are considering adding more models in the future. \
+If the model you wish to use is not listed, you may need to implement the corresponding code yourself (for model loading, add code to `RLAIF-V/builder`; for answer sampling, refer to `RLAIF-V/llava/llava15_sample_data.py` to see how data is formatted (don't forget to pass `raw_images`) and add call it in `RLAIF-V/data_engine/answer_sampler.py`; for log probability calculation, change data formatting part in `RLAIF-V/data_engine/logps_calculator.py` and `get_multimodal_sample_logps` function in `RLAIF-V/muffin/eval/muffin_inference_logp.py`).
 
 Additionally, **please double-check that the model name you provide is correct**, as we will not know which code to execute otherwise.
 
 Next, your dataset should contain the following fields:
 1. `idx`: A unique index for each data entry (this can be a string).
 2. `question`: The question related to the image.
-3. `image`: You can determine the column name by passing it via the `--image_column` parameter. The column should follow this structure:
+3. `image`: The column should follow this structure:
    - `{'bytes': ..., 'path':...}`
    - `bytes` should be in binary format.
    - `path` is not strictly required, but to avoid errors, it's better to keep this field (you can set it as an empty string).

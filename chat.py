@@ -168,7 +168,6 @@ class RLAIFV7B:
                     input_ids,
                     images=image_tensor.unsqueeze(0).half().cuda(),
                     image_sizes=[image.size],
-                    max_new_tokens=1024,
                     use_cache=True,
                     **param
                 )

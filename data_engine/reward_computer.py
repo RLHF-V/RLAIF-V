@@ -104,7 +104,7 @@ def compute_reward(tokenizer, reward_logps_dir, instruct_logps_dir):
             instruct_logps = list(map(float, instruct_logps.split(",")))
             instruct_logps_for_reward = instruct_logps[-len(tokens):]
 
-            differences = [instruct_logp - reward_logp for instruct_logp, reward_logp in
+            differences = [reward_logp - instruct_logp for instruct_logp, reward_logp in
                            zip(instruct_logps_for_reward, reward_logps_for_reward)]
             min_reward = min(differences) * 0.1
             sum_reward = sum(differences) * 0.1

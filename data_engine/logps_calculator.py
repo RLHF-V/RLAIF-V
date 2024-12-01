@@ -1,82 +1,55 @@
 import os
-import tqdm
 import itertools
 import argparse
-from muffin.eval.muffin_inference_logp import (get_batch_logps, write_logp_to_preference_parquet)
+from functools import partial
+
+import datasets
+import numpy as np
+from transformers import BatchFeature
+
+from builder.builder import load_pretrained_model
+from muffin.eval.muffin_inference_logp import (write_logp_to_preference_parquet, get_multimodal_sample_logps,
+                                               concate_pad)
+from muffin.gen_data_util import InferenceSampler
+from muffin.train.train_utils import SFT_collator_fn
 from util import *
+from dataset import PreferenceInferenceDataset
 
 import torch
 import torch.distributed as dist
+import torch.utils.data as torch_data
 
 
-def get_multimodal_sample_logps(model, dataloader, is_llava15=False):
-    win_logp_list = []
-    rej_logp_list = []
+def preference_collator_fn(instances, pad_token_id, is_omni=False):
+    rej_instances, win_instances = list(zip(*instances))
+    rej_batch = SFT_collator_fn(rej_instances, pad_token_id)
+    win_batch = SFT_collator_fn(win_instances, pad_token_id)
 
-    win_avg_logp_list = []
-    rej_avg_logp_list = []
+    concatenated_input_ids = concate_pad(win_batch['input_ids'], rej_batch['input_ids'], pad_token_id)
+    concatenated_labels = concate_pad(win_batch['labels'], rej_batch['labels'], -100)
+    concatenated_attention_mask = concatenated_input_ids.ne(pad_token_id)
 
-    win_per_token_logp_list = []
-    rej_per_token_logp_list = []
+    if not is_omni:
+        if isinstance(win_batch['images'][0], BatchFeature):
+            win_images = torch.stack([torch.tensor(img.pixel_values[0]) for img in win_batch['images']])
+        elif isinstance(win_batch['images'][0], np.ndarray):
+            win_images = torch.stack([torch.tensor(img) for img in win_batch['images']])
+        else:
+            win_images = win_batch['images']
 
-    with torch.inference_mode():
-        idx = 0
-        for batch in tqdm.tqdm(dataloader):
-            for key in ['win', 'rej']:
-                input_ids = batch[f'{key}_input_ids'].cuda()
-                # tokens = tokenizer.batch_decode(copy.deepcopy(input_ids))
-                # print(tokens)
-                labels = batch[f'{key}_labels'].cuda()
-                attention_mask = batch[f'{key}_attention_mask'].cuda()
-
-                if is_llava15:
-                    # print("is llava15")
-                    (
-                        _,
-                        _,
-                        _,
-                        _,
-                        inputs_embeds,
-                        labels
-                    ) = model.prepare_inputs_labels_for_multimodal(
-                        input_ids=input_ids,
-                        position_ids=None,
-                        attention_mask=None,
-                        past_key_values=None,
-                        labels=labels,
-                        images=batch['images'].to(dtype=torch.bfloat16, device='cuda'),
-                    )
-                    output = model.forward(
-                        inputs_embeds=inputs_embeds,
-                        labels=None,
-                    )
-                else:
-                    output = model(
-                        input_ids=input_ids,
-                        labels=labels,
-                        attention_mask=attention_mask,
-                        images=batch['images'].to(dtype=torch.bfloat16, device='cuda'),
-                    )
-                per_token_logp, log_prob, average_log_prob = get_batch_logps(output.logits, labels, return_all=True)
-
-                # print(per_token_logp.shape, input_ids.shape, labels.shape, flush=True)
-                assert per_token_logp.size(1) >= input_ids.size(1) - 1
-                per_token_logp = per_token_logp.tolist()
-                # per_token_logp = [x[:input_ids[i].ne(tokenizer.pad_token_id).sum().item()] for i, x in enumerate(per_token_logp)]
-                log_prob = log_prob.tolist()
-                average_log_prob = average_log_prob.tolist()
-
-                if key == 'win':
-                    win_logp_list += log_prob
-                    win_avg_logp_list += average_log_prob
-                    win_per_token_logp_list += per_token_logp
-                else:
-                    rej_logp_list += log_prob
-                    rej_avg_logp_list += average_log_prob
-                    rej_per_token_logp_list += per_token_logp
-            # print(f'{key} logits in {output.logits.shape}, logp in {log_prob.shape} avg_logp in {average_log_prob.shape}', flush=True)
-
-    return win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
+    batch = dict(
+        concatenated_input_ids=concatenated_input_ids,
+        concatenated_labels=concatenated_labels,
+        concatenated_attention_mask=concatenated_attention_mask,
+        win_input_ids=win_batch['input_ids'],
+        rej_input_ids=rej_batch['input_ids'],
+        win_labels=win_batch['labels'],
+        rej_labels=rej_batch['labels'],
+        win_attention_mask=win_batch['attention_mask'],
+        rej_attention_mask=rej_batch['attention_mask'],
+        images=win_batch['images'] if is_omni else win_images,
+    )
+    return batch
 
 
 def inference_logp(
@@ -95,7 +68,29 @@ def inference_logp(
 
     """
 
-    model, dataset, dataloader = load_model_and_dataloader(model_path, model_name, dataset_path)
+    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
+                                                                           device_map={"": 'cuda'})
+    image_token_len = 0
+    if hasattr(model, "model") and hasattr(model.model, "config") and hasattr(model.model.config, "num_query"):
+        image_token_len = model.model.config.num_query
+
+    model = model.to(dtype=torch.bfloat16, device='cuda')
+    hf_data = datasets.load_dataset(dataset_path, cache_dir='./cache')['train'].cast_column("image",
+                                                                                            datasets.Image(
+                                                                                                decode=False))
+    dataset = PreferenceInferenceDataset(model_name=model_name,
+                                         tokenizer=tokenizer,
+                                         data=hf_data,
+                                         image_token_len=image_token_len,
+                                         img_processor=image_processor,
+                                         use_im_start_end=False)
+    collate_fn = partial(
+        preference_collator_fn,
+        pad_token_id=tokenizer.pad_token_id,
+        is_omni=("omni" in model_name.lower()) or (
+                "rlaif" in model_name.lower() and "12b" in model_path.lower()))  # judge if the model follow omni structure
+    dataloader = torch_data.DataLoader(dataset, batch_size=1, collate_fn=collate_fn,
+                                       num_workers=5, shuffle=False, sampler=InferenceSampler(len(dataset)))
 
     outputs = get_multimodal_sample_logps(
         # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list

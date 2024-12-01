@@ -47,10 +47,11 @@ def main(data):
     from .length_filter import LengthFilter
     from .num_filter import NumFilter
     from .same_filter import DeleteSameFilter
+    from .ratio_filter import RatioFilter
 
     # you can add your own filters here or delete the filters
     # that are determined to be unnecessary
-    filters = [NumFilter, LengthFilter, DeleteSameFilter]
+    filters = [DeleteSameFilter, NumFilter, LengthFilter]
 
     for filter_to_run in filters:
         filter_name = filter_to_run.__name__

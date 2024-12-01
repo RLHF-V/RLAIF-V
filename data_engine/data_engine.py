@@ -57,24 +57,26 @@ def run(
         instruct_model_path,
         dataset_path,
         work_dir,
-        image_column="image",
         continue_from_stage=1,
         sample_k=10,
         rank=3,
         distance=25,
         debug=False
 ):
+    # -1: multi cuda env init
     dist.init_process_group(backend='nccl', world_size=int(os.getenv('WORLD_SIZE', '1')),
                             rank=int(os.getenv('RANK', '0')), )
     torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
+    # 0: sample answer
     sampled_answer_path = os.path.join(work_dir, "sampled_answer")
     if continue_from_stage <= 0:
         print_stage(0, "Sample answers")
         dir_prepare(sampled_answer_path)
-        answer_sampler.sample_answer(instruct_model_path, dataset_path, sampled_answer_path, image_column, sample_k)
+        answer_sampler.sample_answer(instruct_model_name, instruct_model_path, dataset_path, sampled_answer_path, sample_k)
         print_stage(0, finish=True)
 
+    # 1: calculate logps
     reward_logps_output_dir = os.path.join(work_dir, "reward_logps")
     instruct_logps_output_dir = os.path.join(work_dir, "instruct_logps")
     if continue_from_stage <= 1:
@@ -101,24 +103,30 @@ def run(
         if continue_from_stage <= 2:
             print_stage(2, "DPO dataset construction")
 
+            # 2.1: calculate reward
             print_stage(2.1, "Calculate reward")
             rewards = reward_computer.main(instruct_model_path, reward_logps_output_dir, instruct_logps_output_dir)
             if debug:
                 store_data_with_no_image(rewards, os.path.join(debug_root_dir, 'rewards.json'))
             print_stage(2.1, finish=True)
 
+            # 2.2: build DPO pair
             print_stage(2.2, "Build DPO pairs")
-            dpo_pair = data_pair_builder.main(rewards, sample_k, rank, distance)
+            dpo_pair, sum_output, avg_output = data_pair_builder.main(rewards, sample_k, rank, distance)
             if debug:
                 store_data_with_no_image(rewards, os.path.join(debug_root_dir, 'dpo_pair.json'))
+                store_data_with_no_image(sum_output, os.path.join(debug_root_dir, 'sum_output.json'))
+                store_data_with_no_image(avg_output, os.path.join(debug_root_dir, 'avg_output.json'))
             print_stage(2.2, finish=True)
 
+            # 2.3: filter DPO pairs
             print_stage(2.3, "Filter DPO pairs")
             data = filter.main(dpo_pair)
             if debug:
                 store_data_with_no_image(rewards, os.path.join(debug_root_dir, 'filtered.json'))
             print_stage(2.3, finish=True)
 
+            # 2.4: save files
             print_stage(2.4, "Save file to dataset format")
             output_path = os.path.join(work_dir, "dataset")
             output_file = os.path.join(output_path, "dpo_dataset.parquet")
@@ -159,7 +167,6 @@ if __name__ == "__main__":
     args.add_argument("--instruct_model_path", type=str, help="The path of the instruct model.")
     args.add_argument("--dataset_path", type=str, help="The path of the dataset.")
     args.add_argument("--work_dir", type=str, help="The working directory.")
-    args.add_argument("--image_column", type=str, help="The column that keep image in your dataset")
     args.add_argument("--continue_from_stage", type=int, default=1, help="The stage to continue from.")
     args.add_argument("--sample_k", type=int, default=10, help="The sample number k.")
     args.add_argument("--rank", type=int, default=3, help="The rank number.")
@@ -174,7 +181,6 @@ if __name__ == "__main__":
         args.instruct_model_path,
         args.dataset_path,
         args.work_dir,
-        args.image_column,
         args.continue_from_stage,
         args.sample_k,
         args.rank,

@@ -1,3 +1,5 @@
+import os.path
+
 from nltk import word_tokenize
 from tqdm import tqdm
 
@@ -17,9 +19,6 @@ def get_ranking_reward_data(sample_k, rewards):
         # 按照 sum 和 avg 降序排列
         sum_sorted_data = sorted(data, key=lambda x: x['sum'], reverse=True)
         avg_sorted_data = sorted(data, key=lambda x: x['avg'], reverse=True)
-        # TODO
-        # sum_sorted_data = sorted(data, key=lambda x: x['sum'])
-        # avg_sorted_data = sorted(data, key=lambda x: x['avg'])
 
         # print(sum_sorted_data[0]['idx'])
 
@@ -132,7 +131,7 @@ def pair_union(sum_reward, avg_reward, sample_k=10, rank=3, distance=25):
 def main(rewards, sample_k=10, rank=3, distance=25):
     sum_output, avg_output = get_ranking_reward_data(sample_k, rewards)
     dpo_pair = pair_union(sum_output, avg_output, sample_k, rank, distance)
-    return dpo_pair
+    return dpo_pair, sum_output, avg_output
 
 
 if __name__ == "__main__":
