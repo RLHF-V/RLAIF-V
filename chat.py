@@ -174,20 +174,60 @@ class RLAIFV7B:
         outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
         return outputs
 
+class RLAIFV7BLoRA:
+    def __init__(self, model_path, model_base) -> None:
+        disable_torch_init()
+        tokenizer, model, image_processor, context_len = load_pretrained_model(
+        model_path=model_path, model_base=model_base, model_name='llava_lora_model', device_map={"": 'cuda'})
+        self.tokenizer=tokenizer
+        self.model=model
+        self.image_processor=image_processor
+        self.context_len=context_len
+
+    def chat(self, input):
+        msgs = input['question']
+        if model.config.mm_use_im_start_end:
+            msgs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n' + msgs
+        else:
+            msgs = DEFAULT_IMAGE_TOKEN + '\n' + msgs
+
+        image = Image.open(input['image']).convert('RGB')
+        conv = conv_templates["llava_v1"].copy()
+        conv.append_message(conv.roles[0], msgs)
+        conv.append_message(conv.roles[1], None)
+        prompt = conv.get_prompt()
+
+        input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).cuda()
+        image_tensor = process_images([image], self.image_processor, self.model.config)[0]
+        with torch.inference_mode():
+            output_ids = self.model.generate(
+                input_ids,
+                images=image_tensor.unsqueeze(0).half().cuda(),
+                image_sizes=[image.size],
+                do_sample=False,
+                temperature=0,
+                num_beams=3,
+                max_new_tokens=1024,
+                use_cache=True)
+        outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
+        return outputs
+
 
 class RLAIFVChat:
     def __init__(self, model_path) -> None:
         if '12B' in model_path:
             self.model = RLAIFV12B(model_path)
-        else:
+        elif '7B' in model_path:
             self.model = RLAIFV7B(model_path)
+            if 'lora_checkpoint' in model_path:
+                self.model = RLAIFV7BLoRA(model_path, model_base='liuhaotian/llava-v1.5-7b')
 
     def chat(self, input, param=None):
         return self.model.chat(input, param=param)
 
 
 if __name__ == '__main__':
-    chat_model = RLAIFVChat('RLAIF-V/RLAIF-V-7B')  # or 'HaoyeZhang/RLAIF-V-12B'
+    chat_model = RLAIFVChat('RLAIF-V/RLAIF-V-7B/lora_checkpoints')  # or 'HaoyeZhang/RLAIF-V-12B'
     image_path = "./examples/test.jpeg"
     msgs = "Why did the car in the picture stop?"
     inputs = {"image": image_path, "question": msgs}
