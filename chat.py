@@ -133,7 +133,7 @@ class RLAIFV7B:
         self.image_processor = image_processor
         self.context_len = context_len
 
-    def chat(self, input, param=None):
+    def chat(self, input):
         msgs = input['question']
         if self.model.config.mm_use_im_start_end:
             msgs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n' + msgs
@@ -153,24 +153,15 @@ class RLAIFV7B:
             0).cuda()
         image_tensor = process_images([image], self.image_processor, self.model.config)[0]
         with torch.inference_mode():
-            if param is None:
-                output_ids = self.model.generate(
-                    input_ids,
-                    images=image_tensor.unsqueeze(0).half().cuda(),
-                    image_sizes=[image.size],
-                    do_sample=False,
-                    temperature=0,
-                    num_beams=3,
-                    max_new_tokens=1024,
-                    use_cache=True)
-            else:
-                output_ids = self.model.generate(
-                    input_ids,
-                    images=image_tensor.unsqueeze(0).half().cuda(),
-                    image_sizes=[image.size],
-                    use_cache=True,
-                    **param
-                )
+            output_ids = self.model.generate(
+                input_ids,
+                images=image_tensor.unsqueeze(0).half().cuda(),
+                image_sizes=[image.size],
+                do_sample=False,
+                temperature=0,
+                num_beams=3,
+                max_new_tokens=1024,
+                use_cache=True)
         outputs = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
         return outputs
 
@@ -186,7 +177,7 @@ class RLAIFV7BLoRA:
 
     def chat(self, input):
         msgs = input['question']
-        if model.config.mm_use_im_start_end:
+        if self.model.config.mm_use_im_start_end:
             msgs = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n' + msgs
         else:
             msgs = DEFAULT_IMAGE_TOKEN + '\n' + msgs
@@ -219,11 +210,11 @@ class RLAIFVChat:
             self.model = RLAIFV12B(model_path)
         elif '7B' in model_path:
             self.model = RLAIFV7B(model_path)
-            if 'lora_checkpoint' in model_path:
-                self.model = RLAIFV7BLoRA(model_path, model_base='liuhaotian/llava-v1.5-7b')
+        elif 'lora_checkpoint' in model_path:
+            self.model = RLAIFV7BLoRA(model_path, model_base='liuhaotian/llava-v1.5-7b')
 
-    def chat(self, input, param=None):
-        return self.model.chat(input, param=param)
+    def chat(self, input):
+        return self.model.chat(input)
 
 
 if __name__ == '__main__':

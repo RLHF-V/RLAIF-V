@@ -81,3 +81,4 @@ def main(model_path, ds_path, answer_dir, sample=10, seed=0, batch_size=10,
     print(f'Dataloader size is {len(dataloader)}')
 
     sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temperature, max_tokens)
+    del model
