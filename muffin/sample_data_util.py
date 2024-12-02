@@ -61,7 +61,7 @@ class SampleDataset(torch_data.Dataset):
         raw_question = item['question']
         question_input_ids = self.question_process(raw_question)
 
-        return {
+        res = {
             'question_id': item['question_id'] if 'question_id' in item else self.start_idx + index,
             'image': image,
             'raw_image': raw_img,
@@ -70,6 +70,8 @@ class SampleDataset(torch_data.Dataset):
             'metainfos': metainfo,
             'origin_dataset': self.file
         }
+        res['idx'] = item['idx'] if 'idx' in item else res['question_id']
+        return res
 
     def __len__(self):
         return len(self.data)
@@ -90,18 +92,19 @@ def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temp
                 use_cache=True,
                 return_dict_in_generate=True)
 
-            for question, output_ids, question_id, metainfos, raw_image in zip(batch['raw_questions'],
-                                                                               output.sequences,
-                                                                               batch['question_id'],
-                                                                               batch['metainfos'],
-                                                                               batch['raw_images']):
+            for question, output_ids, idx, question_id, metainfos, raw_image in zip(batch['raw_questions'],
+                                                                                    output.sequences,
+                                                                                    batch['idx'],
+                                                                                    batch['question_id'],
+                                                                                    batch['metainfos'],
+                                                                                    batch['raw_images']):
                 response = tokenizer.decode(
                     output_ids, skip_special_tokens=True)
                 response = response.strip()
 
                 if 'ds_question_id' in metainfos:
                     outputs.append({
-                        'idx': question_id,
+                        'idx': idx,
                         'question_id': question_id,
                         'ds_question_id': metainfos['ds_question_id'],
                         'question': question,
@@ -113,7 +116,7 @@ def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temp
                     })
                 else:
                     outputs.append({
-                        'idx': question_id,
+                        'idx': idx,
                         'question_id': question_id,
                         'question': question,
                         'chosen': response,

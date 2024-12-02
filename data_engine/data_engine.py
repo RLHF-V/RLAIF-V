@@ -73,7 +73,8 @@ def run(
     if continue_from_stage <= 0:
         print_stage(0, "Sample answers")
         dir_prepare(sampled_answer_path)
-        answer_sampler.sample_answer(instruct_model_name, instruct_model_path, dataset_path, sampled_answer_path, sample_k)
+        answer_sampler.sample_answer(instruct_model_name, instruct_model_path, dataset_path, sampled_answer_path,
+                                     sample_k)
         print_stage(0, finish=True)
 
     # 1: calculate logps

@@ -32,6 +32,8 @@ def zephyr_qa_colloator_fn(data_list, tokenizer, img_transform):
 
     if 'question_id' in data_list[0]:
         data['question_id'] = [x['question_id'] for x in data_list]
+    if 'idx' in data_list[0]:
+        data['idx'] = [x['idx'] for x in data_list]
     if 'origin_dataset' in data_list[0]:
         data['origin_dataset'] = [x['origin_dataset'] for x in data_list]
     if 'answer' in data_list[0]:

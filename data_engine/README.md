@@ -20,9 +20,6 @@ Next, your dataset should contain the following fields:
    - `{'bytes': ..., 'path':...}`
    - `bytes` should be in binary format.
    - `path` is not strictly required, but to avoid errors, it's better to keep this field (you can set it as an empty string).
-4. `image_path`: This field is optional; we will retain it in your final DPO dataset.
-5. `ds_name`: This field is also optional; it will be retained in the final DPO dataset.
-6. `origin_split`: This field is optional, but **if you pass it, please ensure it is in JSON format**. It will be retained in the final DPO dataset.
 
 You can specify a `--work_dir` to store intermediate files and the final output under this directory (which will actually be a subdirectory within it).
 
