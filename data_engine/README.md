@@ -3,7 +3,7 @@
 ## Welcome
 Thank you for using Data Engine.  
 This part of the code is used to build the DPO dataset, which you can use for direct training.  
-You only need to input the reward model, instruction model, and your dataset, and we will generate the DPO dataset for you. All you need to do is run the `run_engine.sh` script.
+You only need to input the reward model (the model trained with DPO which is used for guidance), instruction model (the model you want to train), and your dataset, and we will generate the DPO dataset for you. All you need to do is run the `run_engine.sh` script.
 
 ## Usage
 Please refer to the `run_engine.sh` script.

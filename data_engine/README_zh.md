@@ -3,7 +3,7 @@
 ## Welcome
 感谢您使用 Data Engine。  
 此部分代码用于为您构建 DPO 数据集，您可以直接用它来进行训练。  
-您只需输入奖励模型（reward model）、指令模型（instruct model）和数据集，我们将为您构建 DPO 数据集。您只需运行 `run_engine.sh` 脚本即可。
+您只需输入奖励模型（reward model，也即一个经过DPO训练的模型，用来为您要训练的模型做指导）、指令模型（instruct model，您要训练的模型）和数据集，我们将为您构建 DPO 数据集。您只需运行 `run_engine.sh` 脚本即可。
 
 ## Usage
 请查看 `run_engine.sh` 脚本。
