@@ -12,8 +12,8 @@ from muffin.eval.muffin_inference_logp import (write_logp_to_preference_parquet,
                                                concate_pad)
 from muffin.gen_data_util import InferenceSampler
 from muffin.train.train_utils import SFT_collator_fn
-from util import *
-from dataset import PreferenceInferenceDataset
+from data_engine.util import *
+from data_engine.pipeline.dpo_reward_pipeline.dataset import PreferenceInferenceDataset
 
 import torch
 import torch.distributed as dist

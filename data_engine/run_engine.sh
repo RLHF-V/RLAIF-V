@@ -21,5 +21,6 @@ torchrun $DISTRIBUTED_ARGS data_engine/data_engine.py \
       --instruct_model_path /path/to/yout/instruct/model \
       --dataset_path /path/to/your/dataset \
       --work_dir /path/to/your/work/dir \
+      --pipeline_name dpo_reward \
       --continue_from_stage 0 \
       --debug True

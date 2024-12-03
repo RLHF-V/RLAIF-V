@@ -1,53 +1,15 @@
-import json
 import os.path
 import random
-from copy import deepcopy
 
 import pandas as pd
 
-import logps_calculator
-import reward_computer
-import data_pair_builder
-from dpo_data_filter import filter
-import answer_sampler
+from data_engine.pipeline.dpo_reward_pipeline.dpo_reward_pipeline import DPORewardPipeline
+from data_engine.util import *
 import argparse
 import torch
 import torch.distributed as dist
 
-
-def store_data_with_no_image(data, path):
-    if torch.distributed.get_rank() == 0:
-        data_to_store = []
-        for item in data:
-            item = deepcopy(item)
-            item.pop('image', None)
-            data_to_store.append(item)
-
-        with open(path, 'w') as f:
-            json.dump(data_to_store, f, ensure_ascii=False, indent=4)
-
-
-def print_stage(idx, desc="", finish=False):
-    if torch.distributed.get_rank() == 0:
-        print("=" * 80)
-        if not finish:
-            print(f"Processing Stage {idx}: {desc}")
-        else:
-            print(f"Finish Stage {idx}")
-        print("=" * 80)
-
-
-def dir_prepare(dir_to_check, clean=True):
-    if torch.distributed.get_rank() == 0:
-        if not os.path.exists(dir_to_check):
-            os.makedirs(dir_to_check)
-        elif clean:
-            if os.path.isdir(dir_to_check):
-                for file in os.listdir(dir_to_check):
-                    os.remove(os.path.join(dir_to_check, file))
-            else:
-                os.remove(dir_to_check)
-                os.mkdir(dir_to_check)
+pipelines = [DPORewardPipeline]
 
 
 def run(
@@ -57,13 +19,26 @@ def run(
         instruct_model_path,
         dataset_path,
         work_dir,
+        pipeline_name,
         continue_from_stage=1,
         sample_k=10,
         rank=3,
         distance=25,
         debug=False
 ):
-    # -1: multi cuda env init
+    pipline = None
+    for pipeline_to_judge in pipelines:
+        if pipeline_to_judge.judge_able_to_process(pipeline_name):
+            pipline = pipeline_to_judge
+            break
+    if pipline is None:
+        raise ValueError("Unsupported pipeline")
+
+    intermediate_step_dir = os.path.join(work_dir, "intermediate_step")
+    if debug:
+        print(
+            "You set debug=True, it will generate fine-grained process data under subdir 'debug'. You can check that dir for debug details.")
+
     dist.init_process_group(backend='nccl', world_size=int(os.getenv('WORLD_SIZE', '1')),
                             rank=int(os.getenv('RANK', '0')), )
     torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
@@ -72,66 +47,52 @@ def run(
     sampled_answer_path = os.path.join(work_dir, "sampled_answer")
     if continue_from_stage <= 0:
         print_stage(0, "Sample answers")
-        dir_prepare(sampled_answer_path)
-        answer_sampler.sample_answer(instruct_model_name, instruct_model_path, dataset_path, sampled_answer_path,
-                                     sample_k)
+        pipline.sample_rollout(
+            instruct_model_name,
+            instruct_model_path,
+            dataset_path,
+            sampled_answer_path,
+            sample_k,
+            os.path.join(intermediate_step_dir, "sample_answers"),
+            debug
+        )
         print_stage(0, finish=True)
 
     # 1: calculate logps
-    reward_logps_output_dir = os.path.join(work_dir, "reward_logps")
-    instruct_logps_output_dir = os.path.join(work_dir, "instruct_logps")
+    reward_output_dir = os.path.join(work_dir, "reward")
     if continue_from_stage <= 1:
-        print_stage(1, "Calculate logps")
-        dir_prepare(reward_logps_output_dir)
-        dir_prepare(instruct_logps_output_dir)
-        _ = logps_calculator.main(
+        print_stage(1, "Calculate rewards")
+        pipline.reward_calculate(
             reward_model_name,
             reward_model_path,
             instruct_model_name,
             instruct_model_path,
             sampled_answer_path,
-            reward_logps_output_dir,
-            instruct_logps_output_dir)
+            reward_output_dir,
+            os.path.join(intermediate_step_dir, "calculate_rewards"),
+            debug
+        )
         print_stage(1, finish=True)
 
     # following code doesn't need multi CUDA
     if torch.distributed.get_rank() == 0:
-        debug_root_dir = os.path.join(work_dir, 'debug')
-        if debug:
-            print(
-                "You set debug=True, it will generate fine-grained process data under subdir 'debug'. You can check that dir for debug details.")
-            dir_prepare(debug_root_dir)
         if continue_from_stage <= 2:
-            print_stage(2, "DPO dataset construction")
+            print_stage(2, "Pair build and filter")
 
-            # 2.1: calculate reward
-            print_stage(2.1, "Calculate reward")
-            rewards = reward_computer.main(instruct_model_path, reward_logps_output_dir, instruct_logps_output_dir)
-            if debug:
-                store_data_with_no_image(rewards, os.path.join(debug_root_dir, 'rewards.json'))
-            print_stage(2.1, finish=True)
+            data = pipline.pair_build_with_filter(
+                reward_output_dir,
+                os.path.join(intermediate_step_dir, "pair_build_and_filter"),
+                sample_k,
+                rank,
+                distance,
+                debug
+            )
+            print_stage(2, finish=True)
 
-            # 2.2: build DPO pair
-            print_stage(2.2, "Build DPO pairs")
-            dpo_pair, sum_output, avg_output = data_pair_builder.main(rewards, sample_k, rank, distance)
-            if debug:
-                store_data_with_no_image(rewards, os.path.join(debug_root_dir, 'dpo_pair.json'))
-                store_data_with_no_image(sum_output, os.path.join(debug_root_dir, 'sum_output.json'))
-                store_data_with_no_image(avg_output, os.path.join(debug_root_dir, 'avg_output.json'))
-            print_stage(2.2, finish=True)
-
-            # 2.3: filter DPO pairs
-            print_stage(2.3, "Filter DPO pairs")
-            data = filter.main(dpo_pair)
-            if debug:
-                store_data_with_no_image(rewards, os.path.join(debug_root_dir, 'filtered.json'))
-            print_stage(2.3, finish=True)
-
-            # 2.4: save files
-            print_stage(2.4, "Save file to dataset format")
+            # -1: save files
+            print_stage(-1, "Save file to dataset format")
             output_path = os.path.join(work_dir, "dataset")
             output_file = os.path.join(output_path, "dpo_dataset.parquet")
-            random.shuffle(data)
             dir_prepare(output_path)
             needed_keys = [
                 "question",
@@ -150,9 +111,7 @@ def run(
             df = pd.DataFrame(data)
             df = df.sample(frac=1).reset_index(drop=True)
             df.to_parquet(output_file)
-            print_stage(2.4, finish=True)
-
-            print_stage(2, finish=True)
+            print_stage(-1)
 
             print(f"We get {len(data)} data items in total, you may need that to set max_steps for training")
             print("Finish all stages, output file is saved to ", output_path)

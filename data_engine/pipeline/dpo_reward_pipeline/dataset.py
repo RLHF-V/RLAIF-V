@@ -8,7 +8,7 @@ from muffin.train.train_utils import encode_multimodal_preference_sample, prepro
 from muffin.utils import load_attr_or_empty_str
 from omnilmm.train.train_utils import omni_preprocess
 
-import util
+import data_engine.util as util
 
 
 class PreferenceInferenceDataset(torch_data.Dataset):
