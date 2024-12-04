@@ -191,12 +191,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    torch.distributed.init_process_group(
-        backend='nccl',
-        world_size=int(os.getenv('WORLD_SIZE', '1')),
-        rank=int(os.getenv('RANK', '0')),
-    )
-    torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
+    if not torch.distributed.is_initialized():
+        torch.distributed.init_process_group(
+            backend='nccl',
+            world_size=int(os.getenv('WORLD_SIZE', '1')),
+            rank=int(os.getenv('RANK', '0')),
+        )
+        torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
     print(f'Init Rank-{torch.distributed.get_rank()}')
     model_path = os.path.expanduser(args.checkpoint)
@@ -304,7 +305,7 @@ if __name__ == '__main__':
 
             else:
                 if args.num_beam >= 1:
-                    print("use beamsearch:", args.num_beam)
+                    # print("use beamsearch:", args.num_beam)
                     output = model.generate(
                         inputs=batch['input_ids'].cuda(),
                         images=batch['images'].half().cuda(),
@@ -315,7 +316,7 @@ if __name__ == '__main__':
                         use_cache=True,
                         return_dict_in_generate=True)
                 else:
-                    print("use sampling:", args.temperature)
+                    # print("use sampling:", args.temperature)
                     output = model.generate(
                         inputs=batch['input_ids'].cuda(),
                         images=batch['images'].half().cuda(),

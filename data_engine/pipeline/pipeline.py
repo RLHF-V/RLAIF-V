@@ -1,3 +1,6 @@
+from typing import Union
+
+
 class Pipeline:
     @classmethod
     def judge_able_to_process(cls, pipeline_name) -> bool:
@@ -28,10 +31,11 @@ class Pipeline:
 
     @classmethod
     def pair_build_with_filter(cls,
+                               sampled_answer_path: str,
                                reward_path: str,
                                work_dir: str,
                                sample_k: int,
                                rank: int,
                                distance: int,
-                               debug: bool) -> list:
+                               debug: bool) -> Union[list, str]:
         raise NotImplementedError

@@ -13,7 +13,7 @@ from data_engine.pipeline.pipeline import Pipeline
 class DPORewardPipeline(Pipeline):
     @classmethod
     def judge_able_to_process(cls, pipeline_name):
-        return pipeline_name.lower() == "dpo_reward"
+        return "dpo_reward" in pipeline_name.lower()
 
     @classmethod
     def sample_rollout(cls,
@@ -58,6 +58,7 @@ class DPORewardPipeline(Pipeline):
 
     @classmethod
     def pair_build_with_filter(cls,
+                               sampled_answer_path: str,
                                reward_path: str,
                                work_dir: str,
                                sample_k: int,
@@ -74,11 +75,11 @@ class DPORewardPipeline(Pipeline):
         rewards = pd.concat(rewards, ignore_index=True).to_dict(orient='records')
         dpo_pair, sum_output, avg_output = data_pair_builder.main(rewards, sample_k, rank, distance)
         if debug:
-            store_data_with_no_image(rewards, os.path.join(work_dir, 'debug', 'dpo_pair.json'))
-            store_data_with_no_image(sum_output, os.path.join(work_dir, 'debug', 'sum_output.json'))
-            store_data_with_no_image(avg_output, os.path.join(work_dir, 'debug', 'avg_output.json'))
+            debug_dir = os.path.join(work_dir, 'debug')
+            dir_prepare(debug_dir)
+            store_data_with_no_image(rewards, os.path.join(debug_dir, 'dpo_pair.json'))
+            store_data_with_no_image(sum_output, os.path.join(debug_dir, 'sum_output.json'))
+            store_data_with_no_image(avg_output, os.path.join(debug_dir, 'avg_output.json'))
         data = filter.main(dpo_pair)
-        if debug:
-            store_data_with_no_image(rewards, os.path.join(work_dir, 'debug', 'filtered.json'))
 
         return data

@@ -1,8 +1,7 @@
 import llava.llava15_sample_data
 import omnilmm.omnilmm_sample_data
 
-from util import *
-import torch.distributed as dist
+from data_engine.util import *
 
 
 def sample_answer(model_name, model_path, dataset_path, output_path, sample_k=10):

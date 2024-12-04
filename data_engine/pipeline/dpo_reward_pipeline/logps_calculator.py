@@ -1,4 +1,3 @@
-import os
 import itertools
 import argparse
 from functools import partial
