@@ -48,8 +48,8 @@ class ZephyrTrainer(Trainer):
             return None
 
         # Build the sampler.
-        # return RandomSampler(self.train_dataset)
-        return SequentialSampler(self.train_dataset)
+        return RandomSampler(self.train_dataset)
+        # return SequentialSampler(self.train_dataset)
 
         # if self.args.group_by_length:
         #     assert NotImplementedError
