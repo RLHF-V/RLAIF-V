@@ -52,7 +52,6 @@ class RLAIFVDataset(torch_data.Dataset):
             self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
 
         self.line_idx = list(range(len(self.data)))
-        random.shuffle(self.line_idx)
 
     def __len__(self):
         return len(self.data)
