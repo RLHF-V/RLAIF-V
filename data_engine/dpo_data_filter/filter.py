@@ -41,22 +41,25 @@ def load_data(file_path):
         raise ValueError(f"Unsupported file type: {ext}")
 
 
-def filter_with_filter_list(filters: list[Filter], data):
+def filter_with_filter_list(filters: list[Filter], data, log=True):
     for filter_to_run in filters:
         filter_name = filter_to_run.__name__
         filter_doc = filter_to_run.__doc__ if filter_to_run.__doc__ else "No documentation available"
-        print("=" * 80)
-        print(f"Processing Filter: {filter_name}")
-        print("=" * 80)
-        print(f"Documentation:\n{filter_doc}\n")
+        if log:
+            print("=" * 80)
+            print(f"Processing Filter: {filter_name}")
+            print("=" * 80)
+            print(f"Documentation:\n{filter_doc}\n")
 
         data = filter_to_run.do_filter(data)
 
-        print("=" * 80)
-        print(f"Filter {filter_name} Finished")
-        print(f"After filtering, we get {len(data)} data items")
-        print("=" * 80 + "\n")
-    print(f"After filtering, we have {len(data)} data")
+        if log:
+            print("=" * 80)
+            print(f"Filter {filter_name} Finished")
+            print(f"After filtering, we get {len(data)} data items")
+            print("=" * 80 + "\n")
+    if log:
+        print(f"After filtering, we have {len(data)} data")
     return data
 
 
@@ -66,6 +69,7 @@ def main(data):
     from .length_filter import LengthFilter
     from .num_filter import NumFilter
     from .same_filter import DeleteSameFilter
+    from .similar_filter import SimilarFilter
 
     # you can add your own filters here or delete the filters
     # that are determined to be unnecessary

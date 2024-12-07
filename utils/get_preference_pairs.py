@@ -33,6 +33,7 @@ def filter_same_instruct(org_data, autocheck_data):
 
     return new_data, remain_autocheck
 
+
 def save_pred_quesid_to_judge(pred_quesid_to_judge, origin_divide_data, save_path):
     new_data = []
     for item in origin_divide_data:
@@ -106,6 +107,8 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
         rej_len += len(rej_answer.split())
 
         image_path = chosen['metainfos']['image_path']
+        image = chosen.get('image', rejected.get('image', ''))
+
         assert chosen['metainfos']['image_path'] == rejected['metainfos']['image_path']
 
         if len(chosen_judge) != len([fact for fact in chosen['facts'] if fact != '']):
@@ -129,6 +132,7 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
         new_item = {
             "image_id": image_path.split('/')[-1],
             "image_path": image_path,
+            "image": image,
             "ds_question_id": ds_question_id,
             "question": question,
             "chosen": ch_answer,
@@ -151,6 +155,7 @@ def get_pair_data(path_autocheck, path_ans_divide, save_path, diff=1):
 
     return pair_data
 
+
 def sample_pair_data(pair_data, sample_num, save_path):
     dsid_2_pairs = defaultdict(list)
     for item in pair_data:
@@ -167,6 +172,7 @@ def sample_pair_data(pair_data, sample_num, save_path):
     print(f"sample {sample_num} pair data:", len(sampled_pairs))
     write_jsonlines(save_path, sampled_pairs)
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--autocheck_path', type=str)
@@ -177,7 +183,6 @@ if __name__ == '__main__':
 
     path = args.autocheck_path
     path_gpt_divide = args.gpt_divide_gq_path
-
 
     save_path = path.replace('.jsonl', '.pair_diff1.jsonl')
     pair_data = get_pair_data(path, path_gpt_divide, save_path, diff=1)

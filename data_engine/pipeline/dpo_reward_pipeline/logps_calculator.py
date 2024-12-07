@@ -109,12 +109,9 @@ def inference_logp(
     logps = list(zip(win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list,
                      rej_per_token_logp_list))
 
-    df = write_logp_to_preference_parquet(dataset.data, output_dir, logps, overwrite_logps=True)
+    _ = write_logp_to_preference_parquet(dataset.data, output_dir, logps, overwrite_logps=True)
 
     torch.distributed.barrier()
-
-    del model
-    return df
 
 
 def main(
@@ -125,8 +122,8 @@ def main(
         dataset_path: str,
         reward_output_dir: str,
         instruct_output_dir: str):
-    _ = inference_logp(instruct_model_name, instruct_model_path, dataset_path, instruct_output_dir)
-    _ = inference_logp(reward_model_name, reward_model_path, dataset_path, reward_output_dir)
+    inference_logp(instruct_model_name, instruct_model_path, dataset_path, instruct_output_dir)
+    inference_logp(reward_model_name, reward_model_path, dataset_path, reward_output_dir)
 
     return {
         "reward_output_dir": reward_output_dir,

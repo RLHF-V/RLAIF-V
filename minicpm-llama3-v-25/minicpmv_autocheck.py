@@ -9,7 +9,7 @@ import io
 import tqdm
 import numpy as np
 from typing import List, Optional
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, AutoImageProcessor, AutoProcessor
 import torch.utils.data as torch_data
 
 from minicpmv_diverse_gen import MiniCPMVQADataset
@@ -19,28 +19,28 @@ class MiniCPM_Llama3_V_RM:
     def __init__(self, model_path) -> None:
         self.model = AutoModel.from_pretrained(model_path, trust_remote_code=True, torch_dtype=torch.float16)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        self.image_processor = AutoImageProcessor.from_pretrained(model_path, trust_remote_code=True)
+        self.processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
         self.model.eval().cuda()
         self.config = self.model.config
 
     def raw_generate(
         self,
-        input_id_list=None,
-        img_list=None,
-        tgt_sizes=None,
+        prompt=None,
+        images=None,
         tokenizer=None,
         max_inp_length: Optional[int] = None,
         vision_hidden_states=None,
         return_vision_hidden_states=False,
         **kwargs
     ):
-        assert input_id_list is not None
-        bs = len(input_id_list)
-        if img_list == None:
+        model_inputs = self.processor(prompt, images, max_length=max_inp_length)
+        bs = len(model_inputs["input_ids"])
+        img_list = model_inputs["pixel_values"]
+        tgt_sizes = model_inputs["tgt_sizes"]
+        if img_list is None:
             img_list = [[] for i in range(bs)]
         assert bs == len(img_list)
-
-        model_inputs = self.model._process_list(tokenizer, input_id_list, max_inp_length)
-
         if vision_hidden_states is None:
             pixel_values = []
             for i in range(bs):
@@ -60,7 +60,7 @@ class MiniCPM_Llama3_V_RM:
             (
                 model_inputs["inputs_embeds"],
                 vision_hidden_states,
-            ) = self.model.get_vllm_embedding(model_inputs)
+            ) = self.model.get_vllm_embedding(model_inputs.to(self.model.device))
 
             result = self._raw_decode(model_inputs["inputs_embeds"], tokenizer, **kwargs)
 
@@ -100,6 +100,7 @@ class MiniCPM_Llama3_V_RM:
         if image is not None and isinstance(copy_msgs[0]['content'], str):
             copy_msgs[0]['content'] = [image, copy_msgs[0]['content']]
 
+        images = []
         for i, msg in enumerate(copy_msgs):
             role = msg["role"]
             content = msg["content"]
@@ -108,39 +109,16 @@ class MiniCPM_Llama3_V_RM:
                 assert role == "user", "The role of first msg should be user"
             if isinstance(content, str):
                 content = [content]
-
-            images = []
-            tgt_sizes = []
             cur_msgs = []
             for c in content:
                 if isinstance(c, Image.Image):
-                    image = c
-                    if self.config.slice_mode:
-                        slice_images, image_placeholder = self.model.get_slice_image_placeholder(
-                            image, self.tokenizer
-                        )
-                        cur_msgs.append(image_placeholder)
-                        for slice_image in slice_images:
-                            slice_image = self.model.transform(slice_image)
-                            H, W = slice_image.shape[1:]
-                            images.append(self.model.reshape_by_patch(slice_image))
-                            tgt_sizes.append(torch.Tensor([H // self.config.patch_size, W // self.config.patch_size]).type(torch.int32))
-                    else:
-                        images.append(self.model.transform(image))
-                        cur_msgs.append(
-                            self.tokenizer.im_start
-                            + self.tokenizer.unk_token * self.config.query_num
-                            + self.tokenizer.im_end
-                        )
+                    images.append(c)
+                    cur_msgs.append("(<image>./</image>)")
                 elif isinstance(c, str):
                     cur_msgs.append(c)
+            msg["content"] = "\n".join(cur_msgs)
 
-            if tgt_sizes:
-                tgt_sizes = torch.vstack(tgt_sizes)
-
-            msg['content'] = '\n'.join(cur_msgs)
-
-        input_ids = self.tokenizer.apply_chat_template(copy_msgs, tokenize=True, add_generation_prompt=False)
+        prompt = self.tokenizer.apply_chat_template(copy_msgs, tokenize=False, add_generation_prompt=False)
 
         generation_config = {
             "num_beams": 1,
@@ -155,10 +133,9 @@ class MiniCPM_Llama3_V_RM:
 
         with torch.inference_mode():
             res = self.raw_generate(
-                input_id_list=[input_ids],
+                prompt=prompt,
                 max_inp_length=max_inp_length,
-                img_list=[images],
-                tgt_sizes=[tgt_sizes],
+                images=images,
                 tokenizer=self.tokenizer,
                 max_new_tokens=max_new_tokens,
                 vision_hidden_states=vision_hidden_states,
@@ -171,8 +148,8 @@ class MiniCPM_Llama3_V_RM:
         no_id = self.tokenizer.encode(f'{self.tokenizer.bos_token}no')[-1]
         No_id = self.tokenizer.encode(f'{self.tokenizer.bos_token}No')[-1]
 
-        print("output_ids:", res.sequences[0])
-        print("response:", self.tokenizer.decode(res.sequences[0]))
+        # print("output_ids:", res.sequences[0])
+        # print("response:", self.tokenizer.decode(res.sequences[0]))
 
         response = self.model._decode_text(res.sequences, self.tokenizer)
         # response = self.tokenizer.decode(
@@ -181,9 +158,9 @@ class MiniCPM_Llama3_V_RM:
 
         output_scores = res.scores[0][0]
         scores = torch.softmax(output_scores, dim=0)
-        print(scores.shape)
-        max_value, max_index = torch.max(scores, dim=0)
-        print(f'scores: {max_index}')
+        # print(scores.shape)
+        # max_value, max_index = torch.max(scores, dim=0)
+        # print(f'scores: {max_index}')
 
         item_scores = {
             'yes': scores[yes_id].cpu().item(),
@@ -219,7 +196,8 @@ def eval_autocheck(args):
                     'answer': response,
                     'scores': score,
                     'metainfos': batch['metainfo'],
-                    'model_path': args.model_name
+                    'model_path': args.model_name,
+                    'image': batch['raw_image']
                 }) + "\n")
             else:
                 ans_file.write(json.dumps({
@@ -227,7 +205,8 @@ def eval_autocheck(args):
                     'raw_question': batch['raw_question'],
                     'answer': response,
                     'metainfos': batch['metainfo'],
-                    'model_path': args.model_name
+                    'model_path': args.model_name,
+                    'image': batch['raw_image']
                 }) + "\n")
 
             ans_file.flush()

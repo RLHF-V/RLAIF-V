@@ -1,7 +1,11 @@
 import os.path
+import random
 
 from nltk import word_tokenize
 from tqdm import tqdm
+
+from data_engine.dpo_data_filter import filter
+from data_engine.dpo_data_filter.similar_filter import SimilarFilter
 
 data_pairs = []
 
@@ -61,7 +65,7 @@ def get_ranking_reward_data(sample_k, rewards):
     return sum_output, avg_output
 
 
-def pair_union(sum_reward, avg_reward, sample_k=10, rank=3, distance=25):
+def pair_union(sum_reward, avg_reward, sample_k=10, rank=3, strict_follow_rank=True, distance=25):
     print(f"sampling number k: {sample_k} \nrank number: {rank} \ndistance: {distance}")
     total_pairs = 0
     total_used_pic = 0
@@ -78,11 +82,13 @@ def pair_union(sum_reward, avg_reward, sample_k=10, rank=3, distance=25):
         idx = sum_reward_whole_data[i]['idx']
         sum_reward_data = sum_reward_whole_data[i:i + sample_k]
         avg_reward_data = avg_reward_whole_data[i:i + sample_k]
+        sum_reward_data = filter.filter_with_filter_list([SimilarFilter], sum_reward_data, log=False)
+        avg_reward_data = filter.filter_with_filter_list([SimilarFilter], avg_reward_data, log=False)
         # top10 -> top rank
-        sum_top_rank = sum_reward_data[:rank]
-        sum_last_rank = sum_reward_data[-rank:]
-        avg_top_rank = avg_reward_data[:rank]
-        avg_last_rank = avg_reward_data[-rank:]
+        sum_top_rank = sum_reward_data[:min(rank, len(sum_reward_data))]
+        sum_last_rank = sum_reward_data[-min(rank, len(sum_reward_data)):]
+        avg_top_rank = avg_reward_data[:min(rank, len(avg_reward_data))]
+        avg_last_rank = avg_reward_data[-min(rank, len(avg_reward_data)):]
 
         avg_top_rank_text = [data['text'] for data in avg_top_rank]
         avg_last_rank_text = [data['text'] for data in avg_last_rank]
@@ -108,29 +114,45 @@ def pair_union(sum_reward, avg_reward, sample_k=10, rank=3, distance=25):
 
         sign = 0
         # construct dpo pair if abs(dif(word_count)) < distance
-        for chosen_data in chosen_answer:
-            for rejected_data in rejected_answer:
-                if abs(chosen_data[1] - rejected_data[1]) < distance:
-                    sign = 1
-                    dpo_pair.append({
-                        "idx": idx,
-                        "question": question,
-                        "chosen": chosen_data[0],
-                        "rejected": rejected_data[0],
-                        "image": sum_reward_whole_data[i]['image']
-                    })
-                    total_pairs += 1
-                    if chosen_data[1] >= rejected_data[1]:
-                        flag += 1
+        if strict_follow_rank:
+            for chosen_data, rejected_data in zip(chosen_answer, rejected_answer):
+                sign = 1
+                dpo_pair.append({
+                    "idx": idx,
+                    "question": question,
+                    "chosen": chosen_data[0],
+                    "rejected": rejected_data[0],
+                    "image": sum_reward_whole_data[i]['image']
+                })
+                total_pairs += 1
+                if chosen_data[1] >= rejected_data[1]:
+                    flag += 1
+        else:
+            random.shuffle(chosen_answer)
+            random.shuffle(rejected_answer)
+            for chosen_data in chosen_answer:
+                for rejected_data in rejected_answer:
+                    if abs(chosen_data[1] - rejected_data[1]) < distance:
+                        sign = 1
+                        dpo_pair.append({
+                            "idx": idx,
+                            "question": question,
+                            "chosen": chosen_data[0],
+                            "rejected": rejected_data[0],
+                            "image": sum_reward_whole_data[i]['image']
+                        })
+                        total_pairs += 1
+                        if chosen_data[1] >= rejected_data[1]:
+                            flag += 1
         if sign == 1:
             total_used_pic += 1
     print(f"total_used_pic: {total_used_pic}")
     return dpo_pair
 
 
-def main(rewards, sample_k=10, rank=3, distance=25):
+def main(rewards, sample_k=10, rank=3, strict_follow_rank=True, distance=25):
     sum_output, avg_output = get_ranking_reward_data(sample_k, rewards)
-    dpo_pair = pair_union(sum_output, avg_output, sample_k, rank, distance)
+    dpo_pair = pair_union(sum_output, avg_output, sample_k, rank, strict_follow_rank, distance)
     return dpo_pair, sum_output, avg_output
 
 

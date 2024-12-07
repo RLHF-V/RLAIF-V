@@ -20,7 +20,7 @@ dependencies = [
     "Pillow==10.3.0", "Requests==2.32.2", "shortuuid==1.0.13",
     "spacy==3.7.2", "timm==0.9.10", "tokenizers==0.15.1",
     "tqdm==4.67.0", "transformers==4.37.0","wandb==0.15.11",
-    "spacy==3.7.2","opencv-python==4.9.0.80", "datasets==2.21.0", "cffi==1.17.1"
+    "spacy==3.7.2","opencv-python==4.9.0.80", "datasets==2.21.0", "cffi==1.17.1", "jieba"
 ]
 
 [project.optional-dependencies]

@@ -82,8 +82,10 @@ class MiniCPMVQADataset(torch_data.Dataset):
         else:
             imgid = ''
 
+        raw_image = None
         if "image" in item.keys():
             img_b64 = item['image']
+            raw_image = img_b64
 
             if len(img_b64) > 100:
                 image = Image.open(io.BytesIO(base64.b64decode(img_b64))).convert('RGB')
@@ -110,6 +112,7 @@ class MiniCPMVQADataset(torch_data.Dataset):
             'metainfo': metainfo,
             'question_id': item['question_id'] if 'question_id' in item else index,
             'origin_dataset': self.qa_file,
+            'raw_image': raw_image,
         }
 
     def __len__(self):
@@ -161,7 +164,8 @@ def eval_model(args):
                     'raw_question': batch['raw_question'],
                     'answer': response,
                     'metainfos': batch['metainfo'],
-                    'model_path': args.model_name
+                    'model_path': args.model_name,
+                    'image': batch['raw_image']
                 }) + "\n")
             else:
                 ans_file.write(json.dumps({
@@ -169,7 +173,8 @@ def eval_model(args):
                     'raw_question': batch['raw_question'],
                     'answer': response,
                     'metainfos': batch['metainfo'],
-                    'model_path': args.model_name
+                    'model_path': args.model_name,
+                    'image': batch['raw_image']
                 }) + "\n")
 
             ans_file.flush()
