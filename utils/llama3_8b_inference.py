@@ -81,8 +81,7 @@ def get_facts(result):
     # print(fact_list)
     return fact_list
 
-def init_divide_pipline():
-    model_id = "/data/apps/RLAIF-V/rlaif-v-main/models/llama3-split"
+def init_divide_pipline(model_id):
     tokenizer = (model_id, {'padding_side': 'left'})
     pipeline = transformers.pipeline(
         "text-generation",
@@ -94,8 +93,7 @@ def init_divide_pipline():
     return tokenizer, pipeline
 
 
-def init_changeq_pipline():
-    model_id = "/data/apps/RLAIF-V/rlaif-v-main/models/llama3-changeq"
+def init_changeq_pipline(model_id):
     tokenizer = (model_id, {'padding_side': 'left'})
     pipeline = transformers.pipeline(
         "text-generation",
@@ -246,18 +244,23 @@ def data_collator(data, pipeline, wrap_func, batch_size=8):
     return batch_inputs
 
 def construct_question_yesno(path, save_path):
-    print("construct_question_yesno")
+    # print("construct_question_yesno")
     data = read_jsonlines(path)
 
     new_qas = []
     for i,item in enumerate(data):
+        image = None
+        if 'image' in item:
+            image = item['image']
         try:
             image_path = item['image_path']
         except:
             try:
                 image_path = item['metainfos']['image_path']
             except:
-                raise ValueError("Do not have 'image_path' in the data!")
+                if image is None:
+                    raise ValueError("Do not have 'image_path' in the data!")
+                image_path = ""
 
         if type(item['facts']) == type(''):
             continue
@@ -280,6 +283,8 @@ def construct_question_yesno(path, save_path):
                 'question': question,
                 'metainfos': metainfos
             }
+            if image is not None:
+                new_item['image'] = image
 
             new_qas.append(new_item)
 
@@ -289,6 +294,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str)
     parser.add_argument('--divide_suffix', type=str, default='llama3-8b_divide')
+    parser.add_argument('--model_path_changeq', type=str, default='/data/apps/RLAIF-V/rlaif-v-main/models/llama3-changeq')
+    parser.add_argument('--model_path_split', type=str, default='/data/apps/RLAIF-V/rlaif-v-main/models/llama3-split')
     parser.add_argument('--chunk-num', type=int, default=1)
     parser.add_argument('--chunk-idx', type=int, default=0)
     parser.add_argument('--bs', type=int, default=4)
@@ -298,7 +305,7 @@ def main():
     args = parser.parse_args()
 
     print(f"chunk_num={args.chunk_num}, chunk_idx={args.chunk_idx}")
-    tokenizer, pipeline = init_divide_pipline()
+    tokenizer, pipeline = init_divide_pipline(args.model_path_split)
 
     path = args.path
 
@@ -310,7 +317,7 @@ def main():
     del tokenizer
     del pipeline
 
-    tokenizer, pipeline = init_changeq_pipline()
+    tokenizer, pipeline = init_changeq_pipline(args.model_path_changeq)
     save_general_questions_path=save_divide_path.replace(".jsonl", ".gq.jsonl")
     print(f"\n==> Do change question... \n save path = {save_general_questions_path}")
     all_outputs = batch_inference(save_divide_path, save_general_questions_path, tokenizer, pipeline,

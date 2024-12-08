@@ -9,7 +9,10 @@ import pandas as pd
 import torch.utils.data as torch_data
 import PIL.Image as PIL_image
 from functools import partial
+
+from muffin.gen_data_util import InferenceSampler
 from muffin.train.train_utils import encode_multimodal_preference_sample, SFT_collator_fn, preprocess_v1
+from muffin.utils import load_attr_or_empty_str
 
 
 def bytes_to_PIL_image(img_buffer):
@@ -50,33 +53,6 @@ def get_batch_logps_minicpm(logits: torch.FloatTensor, labels: torch.LongTensor,
         return per_token_logps, log_prob, average_log_prob
 
     return log_prob, average_log_prob
-
-
-class InferenceSampler(torch.utils.data.sampler.Sampler):
-
-    def __init__(self, size):
-        self._size = int(size)
-        assert size > 0
-        self._rank = torch.distributed.get_rank()
-        self._world_size = torch.distributed.get_world_size()
-        self._local_indices = self._get_local_indices(size, self._world_size,
-                                                      self._rank)
-
-    @staticmethod
-    def _get_local_indices(total_size, world_size, rank):
-        shard_size = total_size // world_size
-        left = total_size % world_size
-        shard_sizes = [shard_size + int(r < left) for r in range(world_size)]
-
-        begin = sum(shard_sizes[:rank])
-        end = min(sum(shard_sizes[:rank + 1]), total_size)
-        return range(begin, end)
-
-    def __iter__(self):
-        yield from self._local_indices
-
-    def __len__(self):
-        return len(self._local_indices)
 
 
 def get_batch_logps(logits: torch.FloatTensor, labels: torch.LongTensor, return_per_token_logp=False, return_all=False, tokenizer=None) -> torch.FloatTensor:
@@ -135,11 +111,12 @@ class PreferenceInferenceDataset(torch_data.Dataset):
 
     def __getitem__(self, index):
         sample = self.data[index]
+        origin_split = load_attr_or_empty_str(sample, 'origin_split')
         metainfo = {
-            "origin_dataset": sample['origin_dataset'],
-            "origin_split": json.loads(sample['origin_split']),
-            "origin_idx": sample['idx'],
-            "image_id": sample['image_path'],
+            "origin_dataset": load_attr_or_empty_str(sample, 'origin_dataset'),
+            "origin_split": json.loads(origin_split) if origin_split != "" else origin_split,
+            "origin_idx": load_attr_or_empty_str(sample, 'idx'),
+            "image_id": load_attr_or_empty_str(sample, 'image_path'),
         }
         question = {'from': 'human', 'value': f"<image>\n{sample['question']}"}
         chosen = {'from': 'gpt', 'value': sample['chosen']}
@@ -208,9 +185,7 @@ def preference_collator_fn(instances, pad_token_id):
     return batch
 
 
-
-
-def get_multimodal_sample_logps(model, dataloader, tokenizer, is_llava15=False):
+def get_multimodal_sample_logps(model, dataloader, is_llava15=False):
     win_logp_list = []
     rej_logp_list = []
 
@@ -312,6 +287,9 @@ def write_logp_to_preference_parquet(origin_data, cache_file, logps, overwrite_l
 
     torch.distributed.barrier()
 
+    if torch.distributed.get_rank() == 0:
+        return df
+
 def inference_logp(model, tokenizer, hf_data, cache_file, image_token_len, img_processor, use_im_start_end, is_llava15=False):
     model = model.to(dtype=torch.bfloat16, device='cuda')
     dataset = PreferenceInferenceDataset(tokenizer=tokenizer,
@@ -323,7 +301,7 @@ def inference_logp(model, tokenizer, hf_data, cache_file, image_token_len, img_p
     dataloader = torch_data.DataLoader(dataset, batch_size=1, collate_fn=collate_fn,
                                        num_workers=5, shuffle=False, sampler=InferenceSampler(len(dataset)))
 
-    outputs = get_multimodal_sample_logps(model, dataloader, tokenizer, is_llava15=is_llava15) # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
+    outputs = get_multimodal_sample_logps(model, dataloader, is_llava15=is_llava15) # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
 
     world_size = torch.distributed.get_world_size()
     merged_outputs = [[None for _ in range(world_size)] for i in range(len(outputs))]
@@ -337,8 +315,9 @@ def inference_logp(model, tokenizer, hf_data, cache_file, image_token_len, img_p
 
     logps = list(zip(win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list))
 
-    write_logp_to_preference_parquet(dataset.data, cache_file, logps, overwrite_logps=False)
+    df = write_logp_to_preference_parquet(dataset.data, cache_file, logps, overwrite_logps=False)
 
     torch.distributed.barrier()
 
     del model
+    return df
