@@ -14,13 +14,49 @@ DISTRIBUTED_ARGS="
     --master_addr $MASTER_ADDR \
     --master_port $MASTER_PORT
 "
-torchrun $DISTRIBUTED_ARGS data_engine/data_engine.py \
-      --reward_model_name reward model name \
-      --reward_model_path /path/to/your/reward/model \
-      --instruct_model_name instruct model name \
-      --instruct_model_path /path/to/yout/instruct/model \
-      --dataset_path /path/to/your/dataset \
-      --work_dir /path/to/your/work/dir \
-      --pipeline_name dpo_reward \
-      --continue_from_stage 0 \
-      --debug True
+
+reward_model_name="reward_model_name"
+reward_model_path="/path/to/yout/reward/model"
+instruct_model_name="instruct_model_name"
+instruct_model_path="/path/to/yout/instruct/model"
+dataset_path="/path/to/your/dataset"
+work_dir="/path/to/your/work/dir"
+pipeline_name="pipeline_name"
+reward_model_python_path="needed_for_minicpmv"
+
+
+torchrun $DISTRIBUTED_ARGS data_engine/engine.py \
+      --reward_model_name $reward_model_name \
+      --reward_model_path $reward_model_path \
+      --instruct_model_name $instruct_model_name \
+      --instruct_model_path $instruct_model_path \
+      --dataset_path $dataset_path \
+      --work_dir  $work_dir \
+      --pipeline_name $pipeline_name \
+      --reward_model_python_path $reward_model_python_path \
+      --run_stage 0\
+      --debug
+
+torchrun $DISTRIBUTED_ARGS data_engine/engine.py \
+      --reward_model_name $reward_model_name \
+      --reward_model_path $reward_model_path \
+      --instruct_model_name $instruct_model_name \
+      --instruct_model_path $instruct_model_path \
+      --dataset_path $dataset_path \
+      --work_dir  $work_dir \
+      --pipeline_name $pipeline_name \
+      --reward_model_python_path $reward_model_python_path \
+      --run_stage 1\
+      --debug
+
+torchrun $DISTRIBUTED_ARGS data_engine/engine.py \
+      --reward_model_name $reward_model_name \
+      --reward_model_path $reward_model_path \
+      --instruct_model_name $instruct_model_name \
+      --instruct_model_path $instruct_model_path \
+      --dataset_path $dataset_path \
+      --work_dir  $work_dir \
+      --pipeline_name $pipeline_name \
+      --reward_model_python_path $reward_model_python_path \
+      --run_stage 2\
+      --debug

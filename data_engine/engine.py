@@ -38,7 +38,7 @@ def run(**kwargs):
 
     # 0: sample answer
     sampled_answer_path = os.path.join(kwargs["work_dir"], "sampled_answer")
-    if kwargs.get("continue_from_stage", 1) <= 0:
+    if kwargs.get("run_stage", 0) == 0:
         dir_prepare(sampled_answer_path)
         sub_work_dir = os.path.join(intermediate_step_dir, "sample_answers")
         dir_prepare(sub_work_dir)
@@ -58,7 +58,7 @@ def run(**kwargs):
 
     # 1: calculate rewards
     reward_output_dir = os.path.join(kwargs["work_dir"], "reward")
-    if kwargs.get("continue_from_stage", 1) <= 1:
+    if kwargs.get("run_stage", 0) == 1:
         dir_prepare(reward_output_dir)
         sub_work_dir = os.path.join(intermediate_step_dir, "calculate_rewards")
         dir_prepare(sub_work_dir)
@@ -78,7 +78,7 @@ def run(**kwargs):
 
     # following code doesn't need multi CUDA
     if torch.distributed.get_rank() == 0:
-        if kwargs.get("continue_from_stage", 1) <= 2:
+        if kwargs.get("run_stage", 0) == 2:
             print_stage(2, "Pair build and filter")
             sub_work_dir = os.path.join(intermediate_step_dir, "pair_build_and_filter")
             dir_prepare(sub_work_dir)
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_path", type=str, required=True, help="The path of the dataset.")
     parser.add_argument("--work_dir", type=str, required=True, help="The working directory.")
     parser.add_argument("--pipeline_name", type=str, required=True, help="The pipeline you choose to run.")
-    parser.add_argument("--continue_from_stage", type=int, default=1, help="The stage to continue from.")
+    parser.add_argument("--run_stage", type=int, default=0, help="The stage to run.")
     parser.add_argument("--sample_k", type=int, default=10, help="The sample number k.")
     parser.add_argument("--rank", type=int, default=3, help="The rank number. (specific to DPORewardPipeline)")
     parser.add_argument("--distance", type=int, default=25, help="The distance. (specific to DPORewardPipeline)")
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         dataset_path=args.dataset_path,
         work_dir=args.work_dir,
         pipeline_name=args.pipeline_name,
-        continue_from_stage=args.continue_from_stage,
+        run_stage=args.run_stage,
         sample_k=args.sample_k,
         rank=args.rank,
         distance=args.distance,

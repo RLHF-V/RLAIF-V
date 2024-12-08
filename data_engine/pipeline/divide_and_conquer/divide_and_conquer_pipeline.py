@@ -1,6 +1,7 @@
 import os
 import subprocess
 import torch
+import sys
 
 from data_engine.pipeline.pipeline import Pipeline
 from data_engine.util import dir_prepare
@@ -15,6 +16,21 @@ def run_bash_script(script_path, *args):
 def get_jsonl_file(path: str) -> list:
     jsonl_files = [f for f in os.listdir(path) if f.endswith('.jsonl')]
     return jsonl_files
+
+
+def get_min_len_file(path: str, name_contains: list[str]) -> str:
+    file_dict = {}
+    min_len = sys.maxsize
+    for file in get_jsonl_file(path):
+        record = True
+        for name in name_contains:
+            if name not in file:
+                record = False
+                break
+        if record:
+            file_dict[len(file)] = file
+            min_len = min(min_len, len(file))
+    return file_dict[min_len]
 
 
 class DivideAndConquerPipeline(Pipeline):
@@ -67,14 +83,8 @@ class DivideAndConquerPipeline(Pipeline):
             changeq = reward_model_path[1].strip()
             split = reward_model_path[2].strip()
             script_path = './script/data_gen/divide_and_conquer/llama3_8b_divide_and_conquer.sh'
-            file_dict = {}
-            min_len = 9999
-            for file in get_jsonl_file(kwargs["sampled_answer_path"]):
-                if 'diverse_gen' not in file:
-                    continue
-                file_dict[len(file)] = file
-                min_len = min(min_len, len(file))
-            file_name = os.path.basename(file_dict[min_len])
+            file_name = get_min_len_file(kwargs["sampled_answer_path"], ['diverse_gen'])
+            file_name = os.path.basename(file_name)
             answer_file = os.path.join(kwargs["sampled_answer_path"], file_name[:file_name.rfind('.')])
             run_bash_script(
                 script_path,
@@ -88,13 +98,8 @@ class DivideAndConquerPipeline(Pipeline):
             )
 
             auto_check_model = reward_model_path[0].strip()
-            file_dict = {}
-            min_len = 9999
-            for file in get_jsonl_file(kwargs["sampled_answer_path"]):
-                if "llama3-8b_divide.gq.qas.jsonl" in file and 'diverse_gen' in file:
-                    file_dict[len(file)] = file
-                    min_len = min(min_len, len(file))
-            check_ques_file = file_dict[min_len]
+            check_ques_file = get_min_len_file(kwargs["sampled_answer_path"],
+                                               ['llama3-8b_divide.gq.qas.jsonl', 'diverse_gen'])
             if 'omni' in auto_check_model.lower() or 'omni' in kwargs["reward_model_name"].lower():
                 print("OmniLMM as auto check model")
                 script_path = './script/data_gen/omnilmm/omnilmm_autocheck.sh'
@@ -136,20 +141,8 @@ class DivideAndConquerPipeline(Pipeline):
                 raise ValueError(f"Missing parameter '{param}' for pair_build_with_filter in DivideAndConquerPipeline.")
 
         if torch.distributed.get_rank() == 0:
-            file_dict = {}
-            min_len = 999
-            for file in get_jsonl_file(kwargs["sampled_answer_path"]):
-                if 'llama3-8b_divide.gq.jsonl' not in file:
-                    continue
-                file_dict[len(file)] = file
-                min_len = min(min_len, len(file))
-            gq_file = file_dict[min_len]
-            file_dict = {}
-            min_len = 999
-            for file in get_jsonl_file(kwargs["reward_path"]):
-                file_dict[len(file)] = file
-                min_len = min(min_len, len(file))
-            feedback_file = file_dict[min_len]
+            gq_file = get_min_len_file(kwargs["sampled_answer_path"], ['llama3-8b_divide.gq.jsonl'])
+            feedback_file = get_min_len_file(kwargs["reward_path"], [])
             script_path = './script/data_gen/construct_pairs.sh'
             run_bash_script(
                 script_path,
@@ -159,18 +152,12 @@ class DivideAndConquerPipeline(Pipeline):
             )
 
             script_path = './utils/get_pairs_filter_shorten.py'
-            file_dict = {}
-            min_len = 999
-            for file in get_jsonl_file(kwargs["reward_path"]):
-                if 'llama3-8b_divide.gq.qas_pair_diff1_samp2.jsonl' not in file:
-                    continue
-                file_dict[len(file)] = file
-                min_len = min(min_len, len(file))
+            file_path = get_min_len_file(kwargs["reward_path"], ['llama3-8b_divide.gq.qas_pair_diff1_samp2.json'])
             result_dir = os.path.join(kwargs["work_dir"], "dataset")
             dir_prepare(result_dir)
             subprocess.run([
                 'python', script_path,
-                '--path', os.path.join(kwargs["reward_path"], file_dict[min_len]),
+                '--path', os.path.join(kwargs["reward_path"], file_path),
                 '--save_path', os.path.join(result_dir, "result.jsonl")
             ], check=True)
             return os.path.join(result_dir, "result.jsonl")
