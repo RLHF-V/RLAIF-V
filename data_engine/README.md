@@ -24,7 +24,7 @@ Each has distinct requirements, explained below.
 
 #### Process Method
 
-Detailed in the corresponding research paper.
+Use RLAIF-V divide-and-conquer strategy to collect AI feedback.
 
 #### Required Models
 
@@ -75,8 +75,7 @@ Dataset should be in `.jsonl` format with the following fields:
 
 #### Process Method
 
-Generates rewards using the DPO framework to rank answers. Higher-ranked answers are marked as "chosen," while
-lower-ranked ones are "rejected."
+Use RLAIF-V self-feedback guidance with DPO-trained models.
 
 #### Custom Implementation
 
