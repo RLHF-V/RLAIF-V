@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import ssl
 import json
@@ -32,9 +33,19 @@ nlp = spacy.load("en_core_web_trf")
 lemma = nltk.wordnet.WordNetLemmatizer()
 
 
+def extract_json_content(text):
+    match = re.search(r'```json\n(.*?)\n```', text, re.DOTALL)
+    if match:
+        json_content = match.group(1)
+        return json.loads(json_content)
+    else:
+        raise ValueError
+
 def parse_object_list(content):
     try:
-        content = json.loads(content)
+        # content = json.loads(content)
+        content = extract_json_content(content)
+
     except:
         if '["' in content:
             try:

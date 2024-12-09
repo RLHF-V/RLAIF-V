@@ -14,16 +14,9 @@ import numpy as np
 from typing import Dict, Optional, Sequence
 from muffin import conversation as conversation_lib
 from packaging import version
-
+from muffin.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN, DEFAULT_IMAGE_TOKEN
 
 IS_TOKENIZER_GREATER_THAN_0_14 = version.parse(tokenizers.__version__) >= version.parse('0.14')
-IMAGE_TOKEN_INDEX = -200 # from llava 1.5, used to determin image in forward function
-IGNORE_INDEX = -100
-DEFAULT_IMAGE_TOKEN = "<image>"
-DEFAULT_IMAGE_PATCH_TOKEN = "<im_patch>"
-DEFAULT_IM_START_TOKEN = "<im_start>"
-DEFAULT_IM_END_TOKEN = "<im_end>"
-
 
 def _tokenize_fn(strings: Sequence[str],
                  tokenizer: transformers.PreTrainedTokenizer) -> Dict:
@@ -72,13 +65,16 @@ def SFT_collator_fn(instances, pad_token_id):
               for instance in instances if 'image' in instance]
     if len(images) > 0:
         # possibly multi-image for each sample
-        if len(images[0].shape) == 4:
-            batch['images'] = images
-        elif all(x is not None and x.shape == images[0].shape for x in images):
-            import numpy
-            if isinstance(images[0], numpy.ndarray):
-                images = [torch.from_numpy(x) for x in images]
-            batch['images'] = torch.stack(images)
+        if hasattr(images[0], 'shape'):
+            if len(images[0].shape) == 4:
+                batch['images'] = images
+            elif all(x is not None and x.shape == images[0].shape for x in images):
+                import numpy
+                if isinstance(images[0], numpy.ndarray):
+                    images = [torch.from_numpy(x) for x in images]
+                batch['images'] = torch.stack(images)
+            else:
+                batch['images'] = images
         else:
             batch['images'] = images
     else:
@@ -347,4 +343,3 @@ def preprocess_v1(
         input_ids=input_ids,
         labels=targets,
     )
-

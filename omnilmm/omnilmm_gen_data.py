@@ -12,50 +12,7 @@ import torch
 import torch.utils.data as torch_data
 import tqdm
 from chat import init_omni_lmm, wrap_question_for_omni_lmm
-
-
-def torch_pad_sequence(sequence, padding_value, batch_first=True, padding_side='right'):
-
-    if padding_side == 'right':
-        sequence = torch.nn.utils.rnn.pad_sequence(
-            sequence,
-            batch_first=batch_first,
-            padding_value=padding_value)
-    elif padding_side == 'left':
-        sequence = torch.nn.utils.rnn.pad_sequence(
-            [v.flip(-1) for v in sequence],
-            batch_first=batch_first,
-            padding_value=padding_value)
-        sequence = sequence.flip(-1)
-    else:
-        raise NotImplementedError(f'padding_size={padding_side}')
-    return sequence
-
-class InferenceSampler(torch.utils.data.sampler.Sampler):
-
-    def __init__(self, size):
-        self._size = int(size)
-        assert size > 0
-        self._rank = torch.distributed.get_rank()
-        self._world_size = torch.distributed.get_world_size()
-        self._local_indices = self._get_local_indices(size, self._world_size,
-                                                      self._rank)
-
-    @staticmethod
-    def _get_local_indices(total_size, world_size, rank):
-        shard_size = total_size // world_size
-        left = total_size % world_size
-        shard_sizes = [shard_size + int(r < left) for r in range(world_size)]
-
-        begin = sum(shard_sizes[:rank])
-        end = min(sum(shard_sizes[:rank + 1]), total_size)
-        return range(begin, end)
-
-    def __iter__(self):
-        yield from self._local_indices
-
-    def __len__(self):
-        return len(self._local_indices)
+from muffin.gen_data_util import InferenceSampler, torch_pad_sequence
 
 
 class GenDataset(torch_data.Dataset):
@@ -110,9 +67,10 @@ class GenDataset(torch_data.Dataset):
         if "image_id" in item.keys():
             imgid = item["image_id"]
 
-        print(item.keys())
+        origin_image = None
         if "image" in item.keys():
             img_b64 = item['image']
+            origin_image = img_b64
 
             if len(img_b64) > 100:
                 image = Image.open(io.BytesIO(base64.b64decode(img_b64))).convert('RGB')
@@ -137,7 +95,8 @@ class GenDataset(torch_data.Dataset):
             'question_input_ids': question_input_ids,
             'raw_question': raw_question,
             'metainfos': metainfo,
-            'origin_dataset': self.qa_file
+            'origin_dataset': self.qa_file,
+            'origin_image': origin_image
         }
 
     def __len__(self):
@@ -175,6 +134,8 @@ def zephyr_qa_colloator_fn(data_list, tokenizer, img_transform):
         data['metainfo'] = [x['metainfo'] for x in data_list]
     if 'metainfos' in data_list[0]:
         data['metainfos'] = [x['metainfos'] for x in data_list]
+    if 'origin_image' in data_list[0]:
+        data['origin_image'] = [x['origin_image'] for x in data_list]
 
     return data
 
@@ -202,12 +163,13 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    torch.distributed.init_process_group(
-        backend='nccl',
-        world_size=int(os.getenv('WORLD_SIZE', '1')),
-        rank=int(os.getenv('RANK', '0')),
-    )
-    torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
+    if not torch.distributed.is_initialized():
+        torch.distributed.init_process_group(
+            backend='nccl',
+            world_size=int(os.getenv('WORLD_SIZE', '1')),
+            rank=int(os.getenv('RANK', '0')),
+        )
+        torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
     print(f'Init Rank-{torch.distributed.get_rank()}')
     model, image_processor, image_token_len, tokenizer = init_omni_lmm(
@@ -262,7 +224,9 @@ if __name__ == '__main__':
                 output_scores_reshape = (batch['input_ids'].shape[0], len(output.scores), args.num_beam, output.scores[0].shape[-1])
                 new_output_scores = output_scores_all.view(output_scores_reshape)
 
-                for question, output_ids, output_scores, question_id, metainfos in zip(batch['raw_questions'], output.sequences, new_output_scores, batch['question_id'], batch['metainfos']):
+                for question, output_ids, output_scores, question_id, metainfos, origin_image in zip(
+                        batch['raw_questions'], output.sequences, new_output_scores, batch['question_id'],
+                        batch['metainfos'], batch['origin_image']):
                     # print(args.max_tokens, output_ids[input_size:].shape, output_scores.shape, output_scores.squeeze().shape)
 
                     response = tokenizer.decode(
@@ -270,9 +234,9 @@ if __name__ == '__main__':
                     response = response.strip()
 
                     scores = torch.softmax(output_scores.squeeze(), dim=0)
-                    print(scores.shape)
+                    # print(scores.shape)
                     max_value, max_index = torch.max(scores, dim=0)
-                    print(f'scores: {max_index}')
+                    # print(f'scores: {max_index}')
 
                     item_scores = {
                         'yes': scores[yes_id].cpu().item(),
@@ -290,17 +254,19 @@ if __name__ == '__main__':
                             'answer': response,
                             'scores': item_scores,
                             'metainfos': metainfos,
-                            'model_path': args.checkpoint
+                            'model_path': args.checkpoint,
+                            'image': origin_image
                         })
                     else:
                         outputs.append({
-                        'question_id': question_id,
-                        'raw_question': question,
-                        'answer': response,
-                        'scores': item_scores,
-                        'metainfos': metainfos,
-                        'model_path': args.checkpoint
-                    })
+                            'question_id': question_id,
+                            'raw_question': question,
+                            'answer': response,
+                            'scores': item_scores,
+                            'metainfos': metainfos,
+                            'model_path': args.checkpoint,
+                            'image': origin_image
+                        })
 
             else:
                 if args.num_beam >= 1:
@@ -323,7 +289,7 @@ if __name__ == '__main__':
                         repetition_penalty=1.1)
 
                 # print(output.scores, flush=True)
-                for question, output_ids, question_id, metainfos in zip(batch['raw_questions'], output.sequences, batch['question_id'], batch['metainfos']):
+                for question, output_ids, question_id, metainfos, origin_image in zip(batch['raw_questions'], output.sequences, batch['question_id'], batch['metainfos'], batch['origin_image']):
                     response = tokenizer.decode(
                             output_ids, skip_special_tokens=True)
                     response = response.strip()
@@ -337,7 +303,8 @@ if __name__ == '__main__':
                             'raw_question': question,
                             'answer': response,
                             'metainfos': metainfos,
-                            'model_path': args.checkpoint
+                            'model_path': args.checkpoint,
+                            'image': origin_image
                         })
                     else:
                         outputs.append({
@@ -345,7 +312,8 @@ if __name__ == '__main__':
                             'raw_question': question,
                             'answer': response,
                             'metainfos': metainfos,
-                            'model_path': args.checkpoint
+                            'model_path': args.checkpoint,
+                            'image': origin_image
                         })
 
     torch.distributed.barrier()

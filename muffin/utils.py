@@ -125,3 +125,10 @@ def pretty_print_semaphore(semaphore):
     if semaphore is None:
         return "None"
     return f"Semaphore(value={semaphore._value}, locked={semaphore.locked()})"
+
+
+def load_attr_or_empty_str(obj: dict, attr: str):
+    if attr in obj:
+        return attr
+    else:
+        return ""
