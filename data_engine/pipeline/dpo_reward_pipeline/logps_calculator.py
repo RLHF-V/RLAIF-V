@@ -13,6 +13,7 @@ from muffin.gen_data_util import InferenceSampler
 from muffin.train.train_utils import SFT_collator_fn
 from data_engine.util import *
 from data_engine.pipeline.dpo_reward_pipeline.dataset import PreferenceInferenceDataset
+import minicpm_v_26.logps
 
 import torch
 import torch.distributed as dist
@@ -66,6 +67,12 @@ def inference_logp(
     Returns:
 
     """
+    if judge_is_minicpmv26(model_name):
+        logps, data = minicpm_v_26.logps.get_dataset_inference_logp(model_name, model_path, dataset_path)
+        _ = write_logp_to_preference_parquet(data, output_dir, logps, overwrite_logps=True)
+
+        torch.distributed.barrier()
+        return
 
     tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, None, model_name,
                                                                            device_map={"": 'cuda'})

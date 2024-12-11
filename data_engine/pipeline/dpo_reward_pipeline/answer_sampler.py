@@ -14,7 +14,6 @@ def sample_answer(model_name, model_path, dataset_path, output_path, sample_k=10
         omnilmm.omnilmm_sample_data.main(model_path, dataset_path, output_path, sample=sample_k, batch_size=sample_k)
         return
     if judge_is_minicpmv26(model_name=model_name):
-
         minicpm_v_26.minicpmv_sample_data.main(model_name, model_path, dataset_path, output_path, sample=sample_k,
                                                batch_size=sample_k)
         return

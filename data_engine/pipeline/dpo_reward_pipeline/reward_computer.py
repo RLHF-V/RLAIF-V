@@ -132,7 +132,7 @@ def compute_reward(tokenizer, reward_logps_dir, instruct_logps_dir):
 
 
 def main(model_path: str, reward_logps_dir: str, instruct_logps_dir: str):
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     rewards = compute_reward(tokenizer, reward_logps_dir, instruct_logps_dir)
     return rewards
 
