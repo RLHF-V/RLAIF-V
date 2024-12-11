@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 import sys
 import argparse
@@ -19,7 +20,7 @@ def run(**kwargs):
             pipline = pipeline_to_judge
             break
     if pipline is None:
-        raise ValueError("Unsupported pipeline")
+        raise ValueError(f"Unsupported pipeline {kwargs.get('pipeline_name', '')}")
 
     intermediate_step_dir = os.path.join(kwargs["work_dir"], "intermediate_step")
 

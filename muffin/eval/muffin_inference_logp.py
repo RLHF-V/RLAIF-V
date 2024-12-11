@@ -10,6 +10,7 @@ import torch.utils.data as torch_data
 import PIL.Image as PIL_image
 from functools import partial
 
+from data_engine.util import judge_is_llava, judge_is_omnilmm, judge_is_minicpmv26
 from muffin.gen_data_util import InferenceSampler
 from muffin.train.train_utils import encode_multimodal_preference_sample, SFT_collator_fn, preprocess_v1
 from muffin.utils import load_attr_or_empty_str
@@ -185,7 +186,7 @@ def preference_collator_fn(instances, pad_token_id):
     return batch
 
 
-def get_multimodal_sample_logps(model, dataloader, is_llava15=False):
+def get_multimodal_sample_logps(model, dataloader, model_name="", is_llava15=False):
     win_logp_list = []
     rej_logp_list = []
 
@@ -194,9 +195,10 @@ def get_multimodal_sample_logps(model, dataloader, is_llava15=False):
 
     win_per_token_logp_list = []
     rej_per_token_logp_list = []
+    if model_name != "":
+        is_llava15 = None
 
     with torch.inference_mode():
-        idx=0
         for batch in tqdm.tqdm(dataloader):
             for key in ['win', 'rej']:
                 input_ids = batch[f'{key}_input_ids'].cuda()
@@ -205,7 +207,7 @@ def get_multimodal_sample_logps(model, dataloader, is_llava15=False):
                 labels = batch[f'{key}_labels'].cuda()
                 attention_mask = batch[f'{key}_attention_mask'].cuda()
 
-                if is_llava15:
+                if is_llava15 if is_llava15 is not None else judge_is_llava(model_name):
                     # print("is llava15")
                     (
                         _,
@@ -226,12 +228,16 @@ def get_multimodal_sample_logps(model, dataloader, is_llava15=False):
                         inputs_embeds=inputs_embeds,
                         labels=None,
                     )
-                else:
+                elif not is_llava15 if is_llava15 is not None else judge_is_omnilmm(model_name):
                     output = model(
                         input_ids=input_ids,
                         labels=labels,
                         attention_mask=attention_mask,
                         images=batch['images'].to(dtype=torch.bfloat16, device='cuda'),
+                    )
+                elif judge_is_minicpmv26(model_name):
+                    output = model(
+
                     )
                 per_token_logp, log_prob, average_log_prob = get_batch_logps(output.logits, labels, return_all=True)
 

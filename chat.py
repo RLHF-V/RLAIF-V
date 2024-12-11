@@ -18,7 +18,7 @@ def init_omni_lmm(model_path):
     torch.backends.cuda.matmul.allow_tf32 = True
     disable_torch_init()
     model_name = os.path.expanduser(model_path)
-    print(f'Load RLAIF-V-12B model and tokenizer from {model_name}')
+    print(f'Load model and tokenizer from {model_name}')
     tokenizer, model, image_processor, _ = load_pretrained_model(model_path, None, model_name)
     image_token_len = model.model.config.num_query
 

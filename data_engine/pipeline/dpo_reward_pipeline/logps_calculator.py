@@ -95,7 +95,8 @@ def inference_logp(
         # win_logp_list, win_avg_logp_list, win_per_token_logp_list, rej_logp_list, rej_avg_logp_list, rej_per_token_logp_list
         model,
         dataloader,
-        is_llava15=judge_is_llava(model_name))  # judge if the model follow llava structure
+        model_name=model_name,
+        is_llava15=None)
 
     world_size = torch.distributed.get_world_size()
     merged_outputs = [[None for _ in range(world_size)] for i in range(len(outputs))]

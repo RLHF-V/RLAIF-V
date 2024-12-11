@@ -1,5 +1,6 @@
 import io
 import os
+from copy import deepcopy
 
 import datasets
 import pandas as pd
@@ -80,15 +81,19 @@ class SampleDataset(torch_data.Dataset):
 def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temperature=0.7, max_tokens=512):
     outputs = []
     cnt = 0
+    meta_info_field = ["raw_questions", "image_sizes", "raw_images", "question_id", "idx", "origin_dataset", "metainfos"]
     with torch.inference_mode():
         for batch in tqdm.tqdm(dataloader, f'Generating answers'):
+            batch_cp = deepcopy(batch)
+            for field in meta_info_field:
+                if field in batch_cp:
+                    del batch_cp[field]
             output = model.generate(
-                inputs=batch['input_ids'].cuda(),
-                images=batch['images'].half().cuda(),
-                image_sizes=batch['image_sizes'],
+                **batch_cp,
                 do_sample=True,
                 temperature=temperature,
                 max_new_tokens=max_tokens,
+                tokenizer=tokenizer,
                 use_cache=True,
                 return_dict_in_generate=True)
 
@@ -98,8 +103,7 @@ def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temp
                                                                                     batch['question_id'],
                                                                                     batch['metainfos'],
                                                                                     batch['raw_images']):
-                response = tokenizer.decode(
-                    output_ids, skip_special_tokens=True)
+                response = tokenizer.decode(output_ids, skip_special_tokens=True) if not isinstance(output_ids, str) else output_ids
                 response = response.strip()
 
                 if 'ds_question_id' in metainfos:

@@ -16,6 +16,12 @@ def judge_is_omnilmm(model_name: str) -> bool:
     return 'omnilmm' in lower_name or ('rlaif' in lower_name and '12b' in lower_name)
 
 
+def judge_is_minicpmv26(model_name: str) -> bool:
+    lower_name = model_name.lower()
+    return ("minicpm-v" in lower_name or "minicpm_v" in lower_name) and (
+            "2_6" in lower_name or "2.6" in lower_name or "26" in lower_name)
+
+
 def store_data_with_no_image(data, path):
     if torch.distributed.get_rank() == 0:
         data_to_store = []
