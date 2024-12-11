@@ -48,6 +48,7 @@ def collactor_fn(data_list, processor):
 
     return data
 
+
 def wrap_question(question, tokenizer):
     pattern = "(<image>./</image>)"
     if "<image>" in question:
@@ -56,6 +57,11 @@ def wrap_question(question, tokenizer):
         question = f"{pattern}{question}"
     msgs_list = [{"role": "user", "content": question}]
     return tokenizer.apply_chat_template(msgs_list, tokenize=False)
+
+
+def decode_text(output_ids, tokenizer):
+    output_ids = output_ids[output_ids != 0]
+    return tokenizer.decode(output_ids, skip_special_tokens=True)
 
 
 def main(model_name, model_path, ds_path, answer_dir, sample=10, seed=0, batch_size=10,
@@ -92,5 +98,6 @@ def main(model_name, model_path, ds_path, answer_dir, sample=10, seed=0, batch_s
 
     print(f'Dataloader size is {len(dataloader)}')
 
-    sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temperature, max_tokens)
+    sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temperature, max_tokens,
+                      decode_text_fn=partial(decode_text, tokenizer=tokenizer))
     del model

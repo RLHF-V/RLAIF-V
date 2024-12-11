@@ -78,7 +78,7 @@ class SampleDataset(torch_data.Dataset):
         return len(self.data)
 
 
-def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temperature=0.7, max_tokens=512):
+def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temperature=0.7, max_tokens=512, decode_text_fn=None):
     outputs = []
     cnt = 0
     meta_info_field = ["raw_questions", "image_sizes", "raw_images", "question_id", "idx", "origin_dataset", "metainfos"]
@@ -103,7 +103,10 @@ def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temp
                                                                                     batch['question_id'],
                                                                                     batch['metainfos'],
                                                                                     batch['raw_images']):
-                response = tokenizer.decode(output_ids, skip_special_tokens=True) if not isinstance(output_ids, str) else output_ids
+                if decode_text_fn is not None:
+                    response = decode_text_fn(output_ids)
+                else:
+                    response = tokenizer.decode(output_ids, skip_special_tokens=True)
                 response = response.strip()
 
                 if 'ds_question_id' in metainfos:

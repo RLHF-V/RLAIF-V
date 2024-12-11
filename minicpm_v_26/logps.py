@@ -78,9 +78,9 @@ class PreferenceInferenceDataset(Dataset):
 
     def prepare_inputs(self, index):
         try:
-            sample = self.data[index]
+            sample = copy.deepcopy(self.data[index])
         except:
-            sample = self.data.iloc[index]
+            sample = copy.deepcopy(self.data.iloc[index])
 
         question = {'role': 'user', 'content': f"<image>\n{sample['question']}"}
         chosen = {'role': 'assistant', 'content': sample['chosen']}

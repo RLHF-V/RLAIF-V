@@ -19,5 +19,6 @@ class MiniCPMV26Builder(ModelBuilder):
 
         tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         image_processor = AutoImageProcessor.from_pretrained(model_path, trust_remote_code=True)
+        tokenizer.add_tokens(['<|im_end|>', '<|endoftext|>'], special_tokens=True)
 
         return tokenizer, model, image_processor
