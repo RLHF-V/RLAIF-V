@@ -108,6 +108,7 @@ def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temp
                 else:
                     response = tokenizer.decode(output_ids, skip_special_tokens=True)
                 response = response.strip()
+                # print(response)
 
                 if 'ds_question_id' in metainfos:
                     outputs.append({

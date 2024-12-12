@@ -56,16 +56,20 @@ def wrap_question(question, tokenizer):
     else:
         question = f"{pattern}{question}"
     msgs_list = [{"role": "user", "content": question}]
-    return tokenizer.apply_chat_template(msgs_list, tokenize=False)
+    return tokenizer.apply_chat_template(msgs_list, tokenize=False, add_generation_prompt=True)
 
 
 def decode_text(output_ids, tokenizer):
     output_ids = output_ids[output_ids != 0]
-    return tokenizer.decode(output_ids, skip_special_tokens=True)
+    if output_ids[0] == tokenizer.bos_id:
+        output_ids = output_ids[1:]
+    if output_ids[-1] in output_ids:
+        output_ids = output_ids[:-1]
+    return tokenizer.decode(output_ids)
 
 
 def main(model_name, model_path, ds_path, answer_dir, sample=10, seed=0, batch_size=10,
-         num_workers=16, max_tokens=512, temperature=0.7):
+         num_workers=16, max_tokens=1024, temperature=0.7):
     if not torch.distributed.is_initialized():
         torch.distributed.init_process_group(
             backend='nccl',

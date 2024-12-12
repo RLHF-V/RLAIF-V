@@ -14,11 +14,11 @@ class MiniCPMV26Builder(ModelBuilder):
 
     @classmethod
     def build(cls, model_path, model_base, model_name, **kwargs):
-        model = AutoModel.from_pretrained(model_path, trust_remote_code=True)
-        model = model.to(torch.device("cuda"))
-
+        # model = AutoModel.from_pretrained(model_path, trust_remote_code=True)
         tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
         image_processor = AutoImageProcessor.from_pretrained(model_path, trust_remote_code=True)
-        tokenizer.add_tokens(['<|im_end|>', '<|endoftext|>'], special_tokens=True)
+        model = AutoModel.from_pretrained(model_path, trust_remote_code=True,
+                                          attn_implementation='sdpa', torch_dtype=torch.bfloat16)
+        model.eval().cuda()
 
         return tokenizer, model, image_processor
