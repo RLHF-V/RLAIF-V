@@ -128,7 +128,7 @@ def get_batch_logps(logits: torch.FloatTensor, labels: torch.LongTensor, return_
     """
     loss_mask = labels != -100
     labels[labels == -100] = 0  # dummy token
-    per_token_logps = torch.gather(logits.softmax(-1), dim=2, index=labels.unsqueeze(2)).squeeze(2)
+    per_token_logps = torch.gather(logits.log_softmax(-1), dim=2, index=labels.unsqueeze(2)).squeeze(2)
     log_prob = (per_token_logps * loss_mask).sum(-1)
     average_log_prob = log_prob / loss_mask.sum(-1)
 
@@ -139,39 +139,6 @@ def get_batch_logps(logits: torch.FloatTensor, labels: torch.LongTensor, return_
         return per_token_logps
 
     return log_prob, average_log_prob
-
-
-def save_logp_pkl(data, cache_file, logps, overwrite_logps=False):
-    out_data = []
-
-    for index in range(len(logps)):
-        try:
-            line = data[index]
-        except:
-            line = data.iloc[index]
-        logp_data = {}
-        logp_data['logps'] = logps[index]
-
-        new_line = copy.deepcopy(line)
-
-        if 'logps' in new_line.keys():
-            assert overwrite_logps, 'Found existing logp data, pass overwrite_logps=True to force overwritting'
-            new_line['logps'] = json.dumps(logp_data)
-
-        else:
-            assert (('question' in list(new_line.keys()))
-                    and ('chosen' in list(new_line.keys()))
-                    and ('rejected' in list(new_line.keys()))), \
-                f'Undefined data structure, expecting [Q, Win, Rej] in keys, got {new_line.keys()}'
-            new_line['logps'] = json.dumps(logp_data)
-
-        out_data.append(new_line)
-
-    torch.distributed.barrier()
-
-    if torch.distributed.get_rank() == 0:
-        with open(cache_file, 'wb') as f:
-            pickle.dump(out_data, f)
 
 
 class PreferenceModel:
@@ -413,15 +380,15 @@ def preference_collator_fn(instances, pad_token_id=0, max_length=2048):
     concatenated_attention_mask = concatenated_input_ids.ne(pad_token_id)
 
     batch = dict(
-        concatenated_input_ids=concatenated_input_ids,  # 这个字段似乎在data_collator中被丢弃了
-        concatenated_labels=concatenated_labels,  # 这个字段似乎在data_collator中被丢弃了
+        concatenated_input_ids=concatenated_input_ids,
+        concatenated_labels=concatenated_labels,
         win_input_ids=win_batch['input_ids'],
         rej_input_ids=rej_batch['input_ids'],
         win_labels=win_batch['labels'],
         rej_labels=rej_batch['labels'],
 
-        concatenated_position_ids=concatenated_position_ids,  # 这个字段似乎在data_collator中被丢弃了
-        concatenated_attention_mask=concatenated_attention_mask,  # 这个字段似乎在data_collator中被丢弃了
+        concatenated_position_ids=concatenated_position_ids,
+        concatenated_attention_mask=concatenated_attention_mask,
 
         images=win_batch['pixel_values'] + win_batch['pixel_values'],
         image_bound=win_batch['image_bound'] + win_batch['image_bound'],
@@ -474,7 +441,6 @@ def conversation_to_ids(conversation, tokenizer, max_length=2048):
 def llm_conversation_to_ids(conversation, tokenizer):
     raw_msg = ""
     chat = []
-    context = []
     for idx, msg in enumerate(conversation):
         role = msg["role"]
         message = msg["content"]
@@ -489,7 +455,6 @@ def llm_conversation_to_ids(conversation, tokenizer):
         raw_msg += prefix + message
     assert set([i['role'] for i in chat]) & set(['assistant'])
 
-    ret = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=False)
     input_ids = tokenizer.apply_chat_template(chat, tokenize=True, add_generation_prompt=False)
     input_ids = np.array(input_ids[:-1])
 

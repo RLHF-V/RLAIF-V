@@ -109,7 +109,7 @@ def compute_reward(tokenizer, reward_logps_dir, instruct_logps_dir):
             min_reward = min(differences) * 0.1
             sum_reward = sum(differences) * 0.1
             last_reward = differences[-1] * 0.1
-            avg_reward = sum_reward / len(tokens) * 0.1
+            avg_reward = sum_reward / len(tokens) * 0.1 if len(tokens) != 0 else float("-inf")
 
             reward_data = {
                 "idx": idx,
