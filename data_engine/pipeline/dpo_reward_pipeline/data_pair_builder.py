@@ -1,5 +1,5 @@
-import os.path
 import random
+from collections import defaultdict
 
 from nltk import word_tokenize
 from tqdm import tqdm
@@ -10,25 +10,25 @@ from data_engine.dpo_data_filter.similar_filter import SimilarFilter
 data_pairs = []
 
 
-def get_ranking_reward_data(sample_k, rewards):
+def get_ranking_reward_data(rewards):
     sum_output = []
     avg_output = []
-    # 打开数据文件进行读取，并打开输出文件进行写入
 
-    data = list(rewards)
-    data_pairs = [data[i:i + sample_k] for i in range(0, len(data), sample_k)]
+    # Group rewards by 'idx'
+    grouped_data = defaultdict(list)
+    for item in rewards:
+        grouped_data[item['idx']].append(item)
 
-    # 对于每组数据对进行排序和逐行写入
-    for data in tqdm(data_pairs):
-        # 按照 sum 和 avg 降序排列
-        sum_sorted_data = sorted(data, key=lambda x: x['sum'], reverse=True)
-        avg_sorted_data = sorted(data, key=lambda x: x['avg'], reverse=True)
+    data_pairs = list(grouped_data.values())
 
-        # print(sum_sorted_data[0]['idx'])
+    # Process each group
+    for group in tqdm(data_pairs, desc="Processing groups"):
+        # Sort the group by 'sum' and 'avg' in descending order
+        sum_sorted_data = sorted(group, key=lambda x: x['sum'], reverse=True)
+        avg_sorted_data = sorted(group, key=lambda x: x['avg'], reverse=True)
 
-        # 逐行写入 sum 排序后的数据
-        for data in sum_sorted_data:
-            rank = sum_sorted_data.index(data) + 1
+        # Assign ranks based on sorted order using enumerate for efficiency
+        for rank, data in enumerate(sum_sorted_data, start=1):
             text = data['chosen']
             word_count = len(word_tokenize(text))
             sum_reward = data['sum']
@@ -42,11 +42,9 @@ def get_ranking_reward_data(sample_k, rewards):
                 "image": data['image'],
                 "text": text,
             }
-            sum_output.append(sum_data_dict)  # 每次构造一个字典就写入文件
+            sum_output.append(sum_data_dict)
 
-        # 逐行写入 avg 排序后的数据
-        for data in avg_sorted_data:
-            rank = avg_sorted_data.index(data) + 1
+        for rank, data in enumerate(avg_sorted_data, start=1):
             text = data['chosen']
             word_count = len(word_tokenize(text))
             avg_reward = data['avg']
@@ -60,7 +58,7 @@ def get_ranking_reward_data(sample_k, rewards):
                 "image": data['image'],
                 "text": text,
             }
-            avg_output.append(avg_data_dict)  # 每次构造一个字典就写入文件
+            avg_output.append(avg_data_dict)
 
     return sum_output, avg_output
 

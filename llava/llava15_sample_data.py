@@ -18,7 +18,7 @@ def llava15_colloator_fn(data_list, tokenizer, image_processor, config):
     input_ids = torch_pad_sequence(
         input_ids, tokenizer.pad_token_id, padding_side='left')
 
-    # NOTE: here we need to pass `raw_images`
+    # NOTE: here we need to pass `raw_images` and `inner_idx`
     images = [process_images([x['image']], image_processor, config)[0] for x in data_list]
     images = torch.stack(images)
     raw_images = [x['raw_image'] for x in data_list]
@@ -26,12 +26,14 @@ def llava15_colloator_fn(data_list, tokenizer, image_processor, config):
     image_sizes = [x['image'].size for x in data_list]
 
     raw_questions = [x['raw_question'] for x in data_list]
+    inner_idx = [x['inner_idx'] for x in data_list]
     data = {
         'images': images,
         'image_sizes': image_sizes,
         'input_ids': input_ids,
         'raw_questions': raw_questions,
         'raw_images': raw_images,
+        'inner_idx': inner_idx,
     }
 
     if 'question_id' in data_list[0]:

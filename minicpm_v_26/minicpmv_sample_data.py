@@ -30,6 +30,7 @@ def collactor_fn(data_list, processor):
 
     data['raw_questions'] = [x['raw_question'] for x in data_list]
     data['raw_images'] = [x['raw_image'] for x in data_list]
+    data['inner_idx'] = [x['inner_idx'] for x in data_list]
 
     if 'question_id' in data_list[0]:
         data['question_id'] = [x['question_id'] for x in data_list]

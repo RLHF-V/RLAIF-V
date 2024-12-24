@@ -36,7 +36,10 @@ class SampleDataset(torch_data.Dataset):
 
         new_data = []
         for i in range(len(self.data)):
-            new_data += [self.data[i]] * repeat_time
+            repeated_data = [self.data[i]] * repeat_time
+            for index, data in enumerate(repeated_data):
+                data['inner_idx'] = index
+            new_data += repeated_data
 
         self.data = new_data
         self.question_process = question_process
@@ -78,10 +81,12 @@ class SampleDataset(torch_data.Dataset):
         return len(self.data)
 
 
-def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temperature=0.7, max_tokens=512, decode_text_fn=None):
+def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temperature=0.7, max_tokens=512,
+                      decode_text_fn=None):
     outputs = []
     cnt = 0
-    meta_info_field = ["raw_questions", "image_sizes", "raw_images", "question_id", "idx", "origin_dataset", "metainfos"]
+    meta_info_field = ["raw_questions", "image_sizes", "raw_images", "question_id", "idx", "origin_dataset",
+                       "metainfos", "inner_idx"]
     with torch.inference_mode():
         for batch in tqdm.tqdm(dataloader, f'Generating answers'):
             batch_cp = deepcopy(batch)
@@ -97,12 +102,13 @@ def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temp
                 use_cache=True,
                 return_dict_in_generate=True)
 
-            for question, output_ids, idx, question_id, metainfos, raw_image in zip(batch['raw_questions'],
-                                                                                    output.sequences,
-                                                                                    batch['idx'],
-                                                                                    batch['question_id'],
-                                                                                    batch['metainfos'],
-                                                                                    batch['raw_images']):
+            for question, output_ids, idx, question_id, metainfos, raw_image, inner_idx in zip(batch['raw_questions'],
+                                                                                               output.sequences,
+                                                                                               batch['idx'],
+                                                                                               batch['question_id'],
+                                                                                               batch['metainfos'],
+                                                                                               batch['raw_images'],
+                                                                                               batch['inner_idx']):
                 if decode_text_fn is not None:
                     response = decode_text_fn(output_ids)
                 else:
@@ -114,6 +120,7 @@ def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temp
                     outputs.append({
                         'idx': idx,
                         'question_id': question_id,
+                        'inner_idx': inner_idx,
                         'ds_question_id': metainfos['ds_question_id'],
                         'question': question,
                         'chosen': response,
@@ -126,6 +133,7 @@ def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temp
                     outputs.append({
                         'idx': idx,
                         'question_id': question_id,
+                        'inner_idx': inner_idx,
                         'question': question,
                         'chosen': response,
                         'rejected': response,

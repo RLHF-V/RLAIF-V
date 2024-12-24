@@ -83,50 +83,100 @@ from muffin.utils import load_attr_or_empty_str
 def compute_reward(tokenizer, reward_logps_dir, instruct_logps_dir):
     rewards = []
     reward_files = [f for f in os.listdir(reward_logps_dir) if f.endswith('.parquet')]
+    instruct_files = [f for f in os.listdir(instruct_logps_dir) if f.endswith('.parquet')]
 
-    for reward_file in tqdm(reward_files, desc='Processing files'):
-        suffix = reward_file.split('_')[-1].split('.')[0]
-        reward_file_path = os.path.join(reward_logps_dir, reward_file)
-        instruct_file_path = os.path.join(instruct_logps_dir, f'RLAIF-V-Dataset-withlogp_{suffix}.parquet')
+    reward_data = []
+    instruct_data = []
+    for reward_file in reward_files:
+        reward_data.append(pd.read_parquet(os.path.join(reward_logps_dir, reward_file)))
+    for instruct_file in instruct_files:
+        instruct_data.append(pd.read_parquet(os.path.join(instruct_logps_dir, instruct_file)))
+    reward_data = pd.concat(reward_data, ignore_index=True)
+    instruct_data = pd.concat(instruct_data, ignore_index=True)
 
-        reward_df = pd.read_parquet(reward_file_path)
-        instruct_df = pd.read_parquet(instruct_file_path)
+    for reward_row in tqdm(reward_data, desc='Processing data'):
+        idx = reward_row["idx"]
+        inner_idx = reward_row["inner_idx"]
+        tokens = tokenizer.encode(reward_row["chosen"])
+        logps = reward_row["logps"].split("[")[-1].split("]")[0]
+        reward_logps = list(map(float, logps.split(",")))
+        reward_logps_for_reward = reward_logps[-len(tokens):]
 
-        for _, reward_row in reward_df.iterrows():
-            idx = reward_row["idx"]
-            tokens = tokenizer.encode(reward_row["chosen"])
-            logps = reward_row["logps"].split("[")[-1].split("]")[0]
-            reward_logps = list(map(float, logps.split(",")))
-            reward_logps_for_reward = reward_logps[-len(tokens):]
+        instruct_row = instruct_data[(instruct_data["idx"] == idx) & (instruct_data["inner_idx"] == inner_idx)]
+        if instruct_row.empty:
+            continue
+        instruct_row = instruct_row.iloc[0]
+        instruct_logps = instruct_row["logps"].split("[")[-1].split("]")[0]
+        instruct_logps = list(map(float, instruct_logps.split(",")))
+        instruct_logps_for_reward = instruct_logps[-len(tokens):]
 
-            instruct_row = instruct_df[instruct_df["idx"] == idx].iloc[0]
-            instruct_logps = instruct_row["logps"].split("[")[-1].split("]")[0]
-            instruct_logps = list(map(float, instruct_logps.split(",")))
-            instruct_logps_for_reward = instruct_logps[-len(tokens):]
+        differences = [reward_logp - instruct_logp for instruct_logp, reward_logp in
+                       zip(instruct_logps_for_reward, reward_logps_for_reward)]
+        min_reward = min(differences) * 0.1
+        sum_reward = sum(differences) * 0.1
+        last_reward = differences[-1] * 0.1
+        avg_reward = sum_reward / len(tokens) * 0.1 if len(tokens) != 0 else float("-inf")
 
-            differences = [reward_logp - instruct_logp for instruct_logp, reward_logp in
-                           zip(instruct_logps_for_reward, reward_logps_for_reward)]
-            min_reward = min(differences) * 0.1
-            sum_reward = sum(differences) * 0.1
-            last_reward = differences[-1] * 0.1
-            avg_reward = sum_reward / len(tokens) * 0.1 if len(tokens) != 0 else float("-inf")
+        reward_data = {
+            "idx": idx,
+            "ds_name": load_attr_or_empty_str(reward_row, "ds_name"),
+            "question": reward_row["question"],
+            "chosen": reward_row["chosen"],
+            "image": reward_row["image"],
+            "image_path": load_attr_or_empty_str(reward_row, "image_path"),
+            "origin_split": load_attr_or_empty_str(reward_row, "origin_split"),
+            "origin_dataset": load_attr_or_empty_str(reward_row, "origin_dataset"),
+            "min": min_reward,
+            "sum": sum_reward,
+            "ORM": last_reward,
+            "avg": avg_reward
+        }
 
-            reward_data = {
-                "idx": idx,
-                "ds_name": load_attr_or_empty_str(reward_row, "ds_name"),
-                "question": reward_row["question"],
-                "chosen": reward_row["chosen"],
-                "image": reward_row["image"],
-                "image_path": load_attr_or_empty_str(reward_row, "image_path"),
-                "origin_split": load_attr_or_empty_str(reward_row, "origin_split"),
-                "origin_dataset": load_attr_or_empty_str(reward_row, "origin_dataset"),
-                "min": min_reward,
-                "sum": sum_reward,
-                "ORM": last_reward,
-                "avg": avg_reward
-            }
+        rewards.append(reward_data)
 
-            rewards.append(reward_data)
+    # for reward_file in tqdm(reward_files, desc='Processing files'):
+    #     suffix = reward_file.split('_')[-1].split('.')[0]
+    #     reward_file_path = os.path.join(reward_logps_dir, reward_file)
+    #     instruct_file_path = os.path.join(instruct_logps_dir, f'RLAIF-V-Dataset-withlogp_{suffix}.parquet')
+    #
+    #     reward_df = pd.read_parquet(reward_file_path)
+    #     instruct_df = pd.read_parquet(instruct_file_path)
+    #
+    #     for _, reward_row in reward_df.iterrows():
+    #         idx = reward_row["idx"]
+    #         tokens = tokenizer.encode(reward_row["chosen"])
+    #         logps = reward_row["logps"].split("[")[-1].split("]")[0]
+    #         reward_logps = list(map(float, logps.split(",")))
+    #         reward_logps_for_reward = reward_logps[-len(tokens):]
+    #
+    #         instruct_row = instruct_df[instruct_df["idx"] == idx].iloc[0]
+    #         instruct_logps = instruct_row["logps"].split("[")[-1].split("]")[0]
+    #         instruct_logps = list(map(float, instruct_logps.split(",")))
+    #         instruct_logps_for_reward = instruct_logps[-len(tokens):]
+    #
+    #         differences = [reward_logp - instruct_logp for instruct_logp, reward_logp in
+    #                        zip(instruct_logps_for_reward, reward_logps_for_reward)]
+    #         min_reward = min(differences) * 0.1
+    #         sum_reward = sum(differences) * 0.1
+    #         last_reward = differences[-1] * 0.1
+    #         avg_reward = sum_reward / len(tokens) * 0.1 if len(tokens) != 0 else float("-inf")
+    #
+    #         reward_data = {
+    #             "idx": idx,
+    #             "ds_name": load_attr_or_empty_str(reward_row, "ds_name"),
+    #             "question": reward_row["question"],
+    #             "chosen": reward_row["chosen"],
+    #             "image": reward_row["image"],
+    #             "image_path": load_attr_or_empty_str(reward_row, "image_path"),
+    #             "origin_split": load_attr_or_empty_str(reward_row, "origin_split"),
+    #             "origin_dataset": load_attr_or_empty_str(reward_row, "origin_dataset"),
+    #             "min": min_reward,
+    #             "sum": sum_reward,
+    #             "ORM": last_reward,
+    #             "avg": avg_reward
+    #         }
+    #
+    #         rewards.append(reward_data)
 
     return rewards
 

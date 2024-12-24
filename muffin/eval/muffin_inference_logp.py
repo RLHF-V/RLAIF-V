@@ -14,6 +14,7 @@ from data_engine.util import judge_is_llava, judge_is_omnilmm, judge_is_minicpmv
 from muffin.gen_data_util import InferenceSampler
 from muffin.train.train_utils import encode_multimodal_preference_sample, SFT_collator_fn, preprocess_v1
 from muffin.utils import load_attr_or_empty_str
+from utils.utils import logp_invalid
 
 
 def bytes_to_PIL_image(img_buffer):
@@ -268,6 +269,12 @@ def write_logp_to_preference_parquet(origin_data, cache_file, logps, overwrite_l
         line = origin_data[index]
         logp_data = {}
         logp_data['logps']=logps[index]
+
+        win_logp = logp_data['logps'][0]
+        rej_logp = logp_data['logps'][3]
+        if logp_invalid(win_logp) or logp_invalid(rej_logp):
+            print("Skip saving logp for idx:", index)
+            continue
 
         new_line = copy.deepcopy(line)
 

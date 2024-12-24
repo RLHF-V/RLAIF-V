@@ -22,12 +22,14 @@ def zephyr_qa_colloator_fn(data_list, tokenizer, img_transform):
     raw_images = [x['raw_image'] for x in data_list]
 
     raw_questions = [x['raw_question'] for x in data_list]
+    inner_idx = [x['inner_idx'] for x in data_list]
     data = {
         'images': images,
         'input_ids': input_ids,
         'attention_mask': attn_mask,
         'raw_questions': raw_questions,
         'raw_images': raw_images,
+        'inner_idx': inner_idx,
     }
 
     if 'question_id' in data_list[0]:
