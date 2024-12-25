@@ -3,7 +3,11 @@ Taken from https://github.com/lucidrains/flamingo-pytorch
 """
 
 import torch
-from einops import rearrange, repeat
+
+try:
+    from einops import rearrange, repeat
+except:
+    pass
 
 try:
     from einops_exts import rearrange_many
