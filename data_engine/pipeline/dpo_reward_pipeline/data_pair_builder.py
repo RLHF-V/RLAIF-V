@@ -149,7 +149,7 @@ def pair_union(sum_reward, avg_reward, sample_k=10, rank=3, strict_follow_rank=T
 
 
 def main(rewards, sample_k=10, rank=3, strict_follow_rank=True, distance=25):
-    sum_output, avg_output = get_ranking_reward_data(sample_k, rewards)
+    sum_output, avg_output = get_ranking_reward_data(rewards)
     dpo_pair = pair_union(sum_output, avg_output, sample_k, rank, strict_follow_rank, distance)
     return dpo_pair, sum_output, avg_output
 

@@ -44,4 +44,9 @@ class OmniLLMBuilder(ModelBuilder):
         vision_config.im_start_token, vision_config.im_end_token = tokenizer.convert_tokens_to_ids(
             [DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN])
 
-        return tokenizer, model, img_processor
+        if hasattr(model.config, "max_sequence_length"):
+            context_len = model.config.max_sequence_length
+        else:
+            context_len = 2048
+
+        return tokenizer, model, img_processor, context_len

@@ -13,7 +13,7 @@ from muffin.sample_data_util import SampleDataset, sample_and_record
 from builder.builder import load_pretrained_model
 
 
-def collactor_fn(data_list, processor):
+def collactor_fn(data_list, processor, tokenizer):
     prompt_list = [x['question_input_ids'] for x in data_list]
     image_list = [[x['image']] for x in data_list]
 
@@ -31,6 +31,7 @@ def collactor_fn(data_list, processor):
     data['raw_questions'] = [x['raw_question'] for x in data_list]
     data['raw_images'] = [x['raw_image'] for x in data_list]
     data['inner_idx'] = [x['inner_idx'] for x in data_list]
+    data['tokenizer'] = tokenizer
 
     if 'question_id' in data_list[0]:
         data['question_id'] = [x['question_id'] for x in data_list]
@@ -90,7 +91,7 @@ def main(model_name, model_path, ds_path, answer_dir, sample=10, seed=0, batch_s
     dataset = SampleDataset(ds_path, question_process_fc, repeat_time=sample)
     print(f'Dataset size is {len(dataset)}')
 
-    collate_fn = partial(collactor_fn, processor=processor)
+    collate_fn = partial(collactor_fn, processor=processor, tokenizer=tokenizer)
     dataloader = torch_data.DataLoader(
         dataset=dataset,
         sampler=InferenceSampler(len(dataset)),

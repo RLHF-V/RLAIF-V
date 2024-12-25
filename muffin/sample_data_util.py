@@ -36,10 +36,10 @@ class SampleDataset(torch_data.Dataset):
 
         new_data = []
         for i in range(len(self.data)):
-            repeated_data = [self.data[i]] * repeat_time
-            for index, data in enumerate(repeated_data):
-                data['inner_idx'] = index
-            new_data += repeated_data
+            for idx in range(repeat_time):
+                repeat_data = deepcopy(self.data[i])
+                repeat_data['inner_idx'] = idx
+                new_data.append(repeat_data)
 
         self.data = new_data
         self.question_process = question_process
@@ -72,6 +72,7 @@ class SampleDataset(torch_data.Dataset):
             'question_input_ids': question_input_ids,
             'raw_question': raw_question,
             'metainfos': metainfo,
+            'inner_idx': item['inner_idx'],
             'origin_dataset': self.file
         }
         res['idx'] = item['idx'] if 'idx' in item else res['question_id']
@@ -93,12 +94,16 @@ def sample_and_record(dataloader, model_path, model, tokenizer, answer_dir, temp
             for field in meta_info_field:
                 if field in batch_cp:
                     del batch_cp[field]
+            if "inputs" in batch_cp:
+                batch_cp["inputs"] = batch_cp["inputs"].cuda()
+            if "images" in batch_cp:
+                batch_cp["images"] = batch_cp["images"].half().cuda()
             output = model.generate(
                 **batch_cp,
                 do_sample=True,
                 temperature=temperature,
                 max_new_tokens=max_tokens,
-                tokenizer=tokenizer,
+                # tokenizer=tokenizer,
                 use_cache=True,
                 return_dict_in_generate=True)
 

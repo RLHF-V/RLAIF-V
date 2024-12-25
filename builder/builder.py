@@ -73,10 +73,10 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
     # Note: please put LanguageModelBuilder at the end of the list if you want you add your own builder
     model_builder_list = [LLaVABuilder, OmniLLMBuilder, MiniCPMV26Builder, LanguageModelBuilder]
 
-    tokenizer, model, image_processor = None, None, None
+    tokenizer, model, image_processor, context_len = None, None, None, None
     for builder in model_builder_list:
         if builder.judge_able_to_build(model_name):
-            tokenizer, model, image_processor = builder.build(model_path, model_base, model_name, **kwargs)
+            tokenizer, model, image_processor, context_len = builder.build(model_path, model_base, model_name, **kwargs)
             break
 
     if model is None:
@@ -84,9 +84,6 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
          is correct. If the model you use is not supported by default, please implement a new builder and add to the \
          model_builder_list in the file RLAIF-V/builder/builder.py")
 
-    if hasattr(model.config, "max_sequence_length"):
-        context_len = model.config.max_sequence_length
-    else:
-        context_len = 2048
+
 
     return tokenizer, model, image_processor, context_len

@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 import random
 from functools import partial
@@ -24,8 +25,8 @@ def zephyr_qa_colloator_fn(data_list, tokenizer, img_transform):
     raw_questions = [x['raw_question'] for x in data_list]
     inner_idx = [x['inner_idx'] for x in data_list]
     data = {
-        'images': images,
-        'input_ids': input_ids,
+        'images': images.half().cuda(),
+        'inputs': input_ids.cuda(),
         'attention_mask': attn_mask,
         'raw_questions': raw_questions,
         'raw_images': raw_images,

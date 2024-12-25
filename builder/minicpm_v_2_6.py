@@ -21,4 +21,4 @@ class MiniCPMV26Builder(ModelBuilder):
                                           attn_implementation='sdpa', torch_dtype=torch.bfloat16)
         model.eval().cuda()
 
-        return tokenizer, model, image_processor
+        return tokenizer, model, image_processor, None

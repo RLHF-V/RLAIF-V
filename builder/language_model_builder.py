@@ -40,4 +40,4 @@ class LanguageModelBuilder(ModelBuilder):
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
                 model = AutoModelForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
 
-        return tokenizer, model, None
+        return tokenizer, model, None, None

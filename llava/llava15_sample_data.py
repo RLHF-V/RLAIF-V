@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 import random
 from functools import partial
@@ -30,7 +31,7 @@ def llava15_colloator_fn(data_list, tokenizer, image_processor, config):
     data = {
         'images': images,
         'image_sizes': image_sizes,
-        'input_ids': input_ids,
+        'inputs': input_ids,
         'raw_questions': raw_questions,
         'raw_images': raw_images,
         'inner_idx': inner_idx,

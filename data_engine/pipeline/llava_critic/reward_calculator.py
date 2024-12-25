@@ -11,8 +11,12 @@ def eval_builder(answers: list[dict[str, any]], sample_k=10):
     for pairs in answer_pairs:
         for index, pair in enumerate(pairs):
             pair_inner_idx = index
+            pair["inner_idx"] = pair_inner_idx
             question = pair["question"]
             response_1 = pair["chosen"]
-            for compare in pairs:  # for convenience, we don't compare the same response, we will do it later
+            for compare in pairs:
+                if compare == pair:
+                    continue
                 response_2 = compare["chosen"]
                 prompt = critic_prompt.format(question, response_1, response_2)
+                pair["critic_prompt"] = prompt

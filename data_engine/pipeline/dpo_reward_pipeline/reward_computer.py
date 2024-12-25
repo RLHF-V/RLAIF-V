@@ -94,7 +94,7 @@ def compute_reward(tokenizer, reward_logps_dir, instruct_logps_dir):
     reward_data = pd.concat(reward_data, ignore_index=True)
     instruct_data = pd.concat(instruct_data, ignore_index=True)
 
-    for reward_row in tqdm(reward_data, desc='Processing data'):
+    for _, reward_row in tqdm(reward_data.iterrows(), desc='Processing data'):
         idx = reward_row["idx"]
         inner_idx = reward_row["inner_idx"]
         tokens = tokenizer.encode(reward_row["chosen"])
