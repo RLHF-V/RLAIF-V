@@ -8,9 +8,10 @@ import torch.distributed as dist
 
 from data_engine.pipeline.divide_and_conquer.divide_and_conquer_pipeline import DivideAndConquerPipeline
 from data_engine.pipeline.dpo_reward_pipeline.dpo_reward_pipeline import DPORewardPipeline
+from data_engine.pipeline.llava_critic.llava_critic_pipeline import LLaVACriticPipeline
 from data_engine.util import *
 
-pipelines = [DPORewardPipeline, DivideAndConquerPipeline]
+pipelines = [DPORewardPipeline, DivideAndConquerPipeline, LLaVACriticPipeline]
 
 
 def run(**kwargs):

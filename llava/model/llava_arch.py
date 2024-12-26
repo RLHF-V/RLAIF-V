@@ -450,6 +450,8 @@ class LlavaMetaForCausalLM(ABC):
                 position_ids = None
 
             return None, position_ids, attention_mask, past_key_values, new_input_embeds, new_labels
+
+
         vision_tower = self.get_vision_tower()
         if vision_tower is None or images is None or input_ids.shape[1] == 1:
             return input_ids, position_ids, attention_mask, past_key_values, None, labels
