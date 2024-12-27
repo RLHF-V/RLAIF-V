@@ -223,11 +223,6 @@ if __name__ == '__main__':
                     use_cache=True,
                     return_dict_in_generate=True,
                     modalities=["image"] * args.batch_size)
-            print("=" * 20)
-            print(batch['input_ids'].shape)
-            print(len(batch['images']))
-            print(len(output.sequences))
-            print("=" * 20)
 
             for question, output_ids, question_id, metainfos, origin_image, idx, inner_idx in zip(
                     batch['raw_questions'],
@@ -268,7 +263,7 @@ if __name__ == '__main__':
                     'answer': response,
                     'metainfos': serialized_metainfos,
                     'model_path': args.checkpoint,
-                    'image': origin_image
+                    # 'image': origin_image
                 })
 
             cnt += 1
