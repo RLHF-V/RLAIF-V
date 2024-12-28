@@ -1,6 +1,7 @@
 import os
 from copy import deepcopy
 import subprocess
+import warnings
 
 import pandas as pd
 import torch
@@ -82,35 +83,43 @@ def __run_bash_script(script_path, *args):
     subprocess.run(command, check=True)
 
 
-better = "[first]"
-worse = "[second]"
-equal = "Two responses are equally"
+better = ["[first]", "The first response is better"]
+worse = ["[second]", "The second response is better"]
+equal = ["Two responses are equally", "The two responses are equally good", "The two responses are identical", "Both responses are equally good"]
+
+
+def __check_contains(list_to_check, response):
+    for item in list_to_check:
+        if item in response:
+            return True
+    return False
 
 
 def __extract_and_calculate(critic_res_dir: str, sampled_answer_path: str):
-    critic_res = read_parquets(critic_res_dir)
-    sampled_answer = read_parquets(sampled_answer_path)
+    critic_res = pd.DataFrame(read_parquets(critic_res_dir))
+    sampled_answer = pd.DataFrame(read_parquets(sampled_answer_path))
 
     scores = []
-    for item in tqdm(sampled_answer, "Calculating scores"):
+    for _, item in tqdm(sampled_answer.iterrows(), total=sampled_answer.shape[0], desc="Calculating scores"):
         idx = item.get('idx')
         inner_idx = item.get('inner_idx')
 
-        critic_res_items = critic_res.query(f'idx == {idx} and inner_idx == {inner_idx}')
+        critic_res_items = critic_res.query(f'idx == "{idx}" and inner_idx == {inner_idx}')
         item = deepcopy(item)
         score = 0
         for _, row in critic_res_items.iterrows():
             critic = row.get('answer')
-            if better in critic:
+            if __check_contains(better, critic):
                 score += 1
-            elif worse in critic:
+            elif __check_contains(worse, critic):
                 score -= 1
-            elif equal in critic:
+            elif __check_contains(equal, critic):
                 score += 0
             else:
-                raise ValueError(f"Invalid critic response: \n{critic}")
+                warnings.warn(f"Invalid critic response: \n{critic}")
+                # raise ValueError(f"Invalid critic response: \n{critic}")
         item['score'] = score
-        scores.append(item)
+        scores.append(item.to_dict())
     return scores
 
 
