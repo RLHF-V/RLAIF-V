@@ -194,12 +194,9 @@ if __name__ == '__main__':
     print(f'Dataloader size is {len(dataloader)}')
 
     outputs = []
-    cnt = 0
     with torch.inference_mode():
-        model.eval()
         for batch in tqdm.tqdm(dataloader, f'Generating answers'):
-            for _image in batch['images']:
-                _image.cuda()
+            batch['images'] = [img.cuda(non_blocking=True) for img in batch['images']]
             if args.num_beam >= 1:
                 output = model.generate(
                     batch['input_ids'].cuda(),
@@ -226,7 +223,7 @@ if __name__ == '__main__':
 
             for question, output_ids, question_id, metainfos, origin_image, idx, inner_idx in zip(
                     batch['raw_questions'],
-                    output.sequences,
+                    output.sequences.cpu(),
                     batch['question_id'],
                     batch['metainfos'],
                     batch['origin_image'],
@@ -235,26 +232,12 @@ if __name__ == '__main__':
                 response = tokenizer.decode(
                     output_ids, skip_special_tokens=True)
                 response = response.strip()
-                print(response)
                 # The better answer: [second]
                 # The better answer: [first]
                 # Two responses are equally good.
 
                 serialized_metainfos = serialize_metainfos(metainfos)
 
-                # if 'ds_question_id' in serialized_metainfos:
-                #     outputs.append({
-                #         'idx': idx,
-                #         'inner_idx': inner_idx,
-                #         'question_id': question_id,
-                #         'ds_question_id': serialized_metainfos['ds_question_id'],
-                #         'raw_question': question,
-                #         'answer': response,
-                #         'metainfos': serialized_metainfos,
-                #         'model_path': args.checkpoint,
-                #         'image': origin_image
-                #     })
-                # else:
                 outputs.append({
                     'idx': idx,
                     'inner_idx': inner_idx,
@@ -266,10 +249,10 @@ if __name__ == '__main__':
                     # 'image': origin_image
                 })
 
-            cnt += 1
-            if cnt == 10:
-                torch.distributed.barrier()
-                cnt = 0
+            del batch
+            del output
+            torch.cuda.empty_cache()
+
     print(len(outputs))
 
     torch.distributed.barrier()

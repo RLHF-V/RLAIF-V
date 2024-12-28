@@ -6,7 +6,7 @@ import torch
 
 from data_engine.util import dir_prepare, store_data_with_no_image
 from data_engine.pipeline.dpo_reward_pipeline import answer_sampler
-from data_engine.pipeline.llava_critic import reward_calculator
+from data_engine.pipeline.llava_critic import reward_calculator, pair_builder_and_filter
 from data_engine.pipeline.pipeline import Pipeline
 
 
@@ -46,6 +46,7 @@ class LLaVACriticPipeline(Pipeline):
             "python_path",
             "reward_path",
             "reward_model_path",
+            "reward_path"
         ]
         for param in required_params:
             if param not in kwargs:
@@ -55,9 +56,24 @@ class LLaVACriticPipeline(Pipeline):
             kwargs["sampled_answer_path"],
             kwargs["work_dir"],
             kwargs["reward_model_path"],
-            kwargs["python_path"]
+            kwargs["python_path"],
+            kwargs["reward_path"]
         )
 
     @classmethod
     def pair_build_with_filter(cls, **kwargs) -> Union[list, str]:
-        pass
+        if torch.distributed.get_rank() == 0:
+            required_params = [
+                "reward_path",
+                "rank",
+            ]
+            for param in required_params:
+                if param not in kwargs:
+                    raise ValueError(f"Missing parameter '{param}' for pair_build_with_filter in llava critic pipeline.")
+
+            dpo_pair = pair_builder_and_filter.build_and_filter(
+                kwargs["reward_path"],
+                kwargs["rank"],
+            )
+            return dpo_pair
+

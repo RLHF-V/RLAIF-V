@@ -2,7 +2,9 @@ import json
 import os
 import shutil
 from copy import deepcopy
+import glob
 
+import pandas as pd
 import torch
 
 
@@ -54,3 +56,26 @@ def dir_prepare(dir_to_check, clean=True):
             else:
                 os.remove(dir_to_check)
             os.makedirs(dir_to_check)
+
+
+def read_parquets(dir_path):
+    parquet_files = glob.glob(os.path.join(dir_path, "*.parquet"))
+    if not parquet_files:
+        raise ValueError(f"No .parquet files found in directory: {dir_path}")
+
+    # Initialize an empty list to collect all data
+    all_data = []
+
+    for file in parquet_files:
+        try:
+            df = pd.read_parquet(file)
+            data = df.to_dict(orient='records')
+            all_data.extend(data)
+            print(f"Loaded {len(data)} records from {file}")
+        except Exception as e:
+            print(f"Error reading {file}: {e}")
+
+    if not all_data:
+        raise ValueError("No data loaded from the .parquet files.")
+
+    return all_data

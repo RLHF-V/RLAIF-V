@@ -15,8 +15,9 @@ Refer to the `run_engine.sh` script for execution. Two pipelines are available f
 
 1. **Divide and Conquer Pipeline** (`divide_and_conquer`)
 2. **DPO Reward Pipeline** (`dpo_reward`)
+3. **LLaVA Critic Pipeline** (`llava_critic`)
 
-Each has distinct requirements, explained below.
+Each pipeline has distinct requirements, explained below.
 
 ---
 
@@ -39,7 +40,8 @@ We support `llava-1.5-7b` as the instruct model. For the reward model, three mod
 2. **Question Split Model** (`rlaifv_llama3_split_model`)
 3. **Auto Check Model** (`OmniLMM-12B` or `MiniCPM-Llama3-V-2_5`)
 
-We don't recommend you to change Question Change Model and Question Split Model.If you wish to use other models as instruct model or auto check model, custom implementation is needed:
+We don't recommend you to change Question Change Model and Question Split Model.If you wish to use other models as
+instruct model or auto check model, custom implementation is needed:
 
 1. **Generate Rollouts**
     - Needed if you want new instruct model
@@ -50,7 +52,8 @@ We don't recommend you to change Question Change Model and Question Split Model.
 2. **Reward Collection**
     - Needed if you want new auto check model
     - Implement builder.
-    - Update `reward_calculate` function in `RLAIF-V/data_engine/pipeline/divide_and_conquer/divide_and_conquer_pipeline.py` to call your own model.
+    - Update `reward_calculate` function in
+      `RLAIF-V/data_engine/pipeline/divide_and_conquer/divide_and_conquer_pipeline.py` to call your own model.
 
 #### Dataset Format
 
@@ -81,7 +84,7 @@ Use RLAIF-V self-feedback guidance with DPO-trained models.
 
 Supported models:
 
-- Instruct Models: `llava-1.5-7b`, `OmniLMM-12B`
+- Instruct Models: `llava-1.5-7b`, `OmniLMM-12B`, `MiniCPM-V-2_6` (need to be run under MiniCPM-V-2_6 environment)
 - Reward Models: `RLAIF-V-7B`, `RLAIF-V-12B`
 
 For other models, implement custom code:
@@ -113,6 +116,45 @@ Fields:
 #### Script Parameters
 
 - `--pipeline_name`: `dpo_reward`.
+
+---
+
+### LLaVA Critic Pipeline
+
+#### Process Method
+
+Use LLaVA critic model to pairwise judge which answer is better. Then the judge result is used as the score to rank the
+answers which is then built into chosen and rejected pairs.
+
+#### Custom Implementation
+
+Supported models:
+
+- Instruct Models: `llava-1.5-7b`, `OmniLMM-12B`, `MiniCPM-V-2_6` (need to be run under MiniCPM-V-2_6 environment)
+- Reward Models: `LLaVA-Critic`
+
+For other models, implement custom code:
+
+1. **Generate Rollouts**
+    - Needed for new instruct model.
+    - Add model builders in `RLAIF-V/builder`.
+    - Add caller code in `RLAIF-V/builder/builder.py`.
+    - Refer to `RLAIF-V/llava/llava15_sample_data.py` for sampling logic.
+    - Update `RLAIF-V/data_engine/pipeline/dpo_reward_pipeline/answer_sampler.py`.
+
+2. **Reward Collection**
+    - In this pipeline, we only support LLaVA-Critic as the reward model.
+
+#### Dataset Format
+
+The same as required in the DPO Reward Pipeline.
+
+#### Script Parameters
+
+- `--pipeline_name`: `dpo_reward`.
+- `reward_python_path`: conda environment **NAME** for LLaVA-Critic. Besides, if your conda `activate` path is not
+  `/opt/conda/bin/activate`, please modify line 14 in the file
+  `RLAIF-V/script/data_gen/llava_critic/llava_critic_gen.sh`.
 
 ---
 

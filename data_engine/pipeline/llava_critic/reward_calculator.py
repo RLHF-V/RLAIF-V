@@ -1,13 +1,14 @@
 import os
-import glob
 from copy import deepcopy
 import subprocess
 
 import pandas as pd
 import torch
+from tqdm import tqdm
 
 from data_engine.util import dir_prepare
 from llava.constants import DEFAULT_IMAGE_TOKEN
+from data_engine.util import read_parquets
 
 __critic_prompt = DEFAULT_IMAGE_TOKEN + "\n" + "Given an image and a corresponding question, please serve as an unbiased and fair judge to evaluate the quality of the answers provided by a Large Multimodal Model (LMM). Determine which answer is better and explain your reasoning with specific details. Your task is provided as follows:\nQuestion: [{}]\nThe first response: [{}]\nThe second response: [{}]\nASSISTANT:\n"
 
@@ -21,24 +22,9 @@ def __eval_builder(directory: str, store_dir: str):
         directory (str): Path to the directory containing .parquet files.
         store_dir (str): Path to store processed prompts
     """
-    parquet_files = glob.glob(os.path.join(directory, "*.parquet"))
-    if not parquet_files:
-        raise ValueError(f"No .parquet files found in directory: {directory}")
 
     # Initialize an empty list to collect all data
-    all_data = []
-
-    for file in parquet_files:
-        try:
-            df = pd.read_parquet(file)
-            data = df.to_dict(orient='records')
-            all_data.extend(data)
-            print(f"Loaded {len(data)} records from {file}")
-        except Exception as e:
-            print(f"Error reading {file}: {e}")
-
-    if not all_data:
-        raise ValueError("No data loaded from the .parquet files.")
+    all_data = read_parquets(directory)
 
     answers = deepcopy(all_data)
 
@@ -96,7 +82,43 @@ def __run_bash_script(script_path, *args):
     subprocess.run(command, check=True)
 
 
-def calculate_reward(sampled_answer_path: str, work_dir: str, model_path: str, llava_critic_python_path:str):
+better = "[first]"
+worse = "[second]"
+equal = "Two responses are equally"
+
+
+def __extract_and_calculate(critic_res_dir: str, sampled_answer_path: str):
+    critic_res = read_parquets(critic_res_dir)
+    sampled_answer = read_parquets(sampled_answer_path)
+
+    scores = []
+    for item in tqdm(sampled_answer, "Calculating scores"):
+        idx = item.get('idx')
+        inner_idx = item.get('inner_idx')
+
+        critic_res_items = critic_res.query(f'idx == {idx} and inner_idx == {inner_idx}')
+        item = deepcopy(item)
+        score = 0
+        for _, row in critic_res_items.iterrows():
+            critic = row.get('answer')
+            if better in critic:
+                score += 1
+            elif worse in critic:
+                score -= 1
+            elif equal in critic:
+                score += 0
+            else:
+                raise ValueError(f"Invalid critic response: \n{critic}")
+        item['score'] = score
+        scores.append(item)
+    return scores
+
+
+def calculate_reward(sampled_answer_path: str,
+                     work_dir: str,
+                     model_path: str,
+                     llava_critic_python_path: str,
+                     reward_path: str):
     if torch.distributed.get_rank() == 0:
         prompts = os.path.join(work_dir, "prompts")
         dir_prepare(prompts)
@@ -112,3 +134,22 @@ def calculate_reward(sampled_answer_path: str, work_dir: str, model_path: str, l
             prompts,
             llava_critic_python_path,
             str(torch.cuda.device_count()))
+
+        scores = __extract_and_calculate(res_dir, sampled_answer_path)
+
+        step = 5000
+        for idx, start in enumerate(range(0, len(scores), step)):
+            temp_data = scores[start: min(start + step, len(scores))]
+            # Verify data before creating DataFrame
+            if len(temp_data) == 0:
+                continue  # Skip empty batches
+
+            df = pd.DataFrame(temp_data)
+            output_file = os.path.join(
+                reward_path,
+                f'RLAIF-V-Dataset-scores_{idx:03}-{len(temp_data)}.parquet'
+            )
+            temp_file = output_file + '.tmp'
+            df.to_parquet(temp_file)
+            os.rename(temp_file, output_file)
+            print(f"Saved {len(temp_data)} records to {output_file}")
