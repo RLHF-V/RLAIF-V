@@ -29,7 +29,8 @@ def build_and_filter(input_dir: str, rank: int):
         raise KeyError(f"Missing required columns in input data: {missing}")
 
     # Group by 'idx'
-    grouped = df.groupby('idx')
+    groupby = df.groupby('idx')
+    grouped = groupby
 
     processed_records = []
 
@@ -38,15 +39,10 @@ def build_and_filter(input_dir: str, rank: int):
         # Sort the group by 'score' descending
         sorted_group = group.sort_values(by='score', ascending=False).reset_index(drop=True)
 
-        # Select top 'rank' as 'chosen'
+        if rank * 2 > len(group):
+            rank = group // 2
         chosen_subset = sorted_group.head(rank)
-
-        # Select next 'rank' as 'rejected'
-        rejected_subset = sorted_group.iloc[rank:rank * 2]
-
-        # Ensure that there are enough entries
-        if len(rejected_subset) < rank:
-            print(f"Warning: Not enough rejected entries for idx {idx}. Expected {rank}, got {len(rejected_subset)}.")
+        rejected_subset = sorted_group.tail(rank)
 
         # Pair 'chosen' and 'rejected'
         for i in range(min(len(chosen_subset), len(rejected_subset))):
