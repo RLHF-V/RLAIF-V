@@ -22,6 +22,6 @@ torchrun --nnodes=1 --nproc_per_node=${num_gpus} --rdzv_id=1 --rdzv_backend=c10d
 --ds_name ${ques_dir} \
 --answer_dir ${ans_dir} \
 --max_tokens 512 \
---num-workers 5 \
+--num-workers 16 \
 --batch-size 4 \
 --temperature 0.7

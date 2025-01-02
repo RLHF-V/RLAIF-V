@@ -26,6 +26,8 @@ from muffin.gen_data_util import InferenceSampler, torch_pad_sequence
 
 
 class GenDataset(torch_data.Dataset):
+    __critic_prompt = DEFAULT_IMAGE_TOKEN + "\n" + "Given an image and a corresponding question, please serve as an unbiased and fair judge to evaluate the quality of the answers provided by a Large Multimodal Model (LMM). Determine which answer is better and explain your reasoning with specific details. Your task is provided as follows:\nQuestion: [{}]\nThe first response: [{}]\nThe second response: [{}]\nASSISTANT:\n"
+
     def __init__(self, file, question_process):
         '''
         qa_file: jsonl file that each line is a dict like {
@@ -39,12 +41,65 @@ class GenDataset(torch_data.Dataset):
             'image',
             datasets.Image(decode=False)
         )
-
         self.question_process = question_process
 
+        # Build grouped data by 'idx' for prompt construction
+        self.grouped_data = self._group_data_by_idx()
+        # Build critic prompts
+        self.critic_prompts = self._build_critic_prompts()
+
+    def _group_data_by_idx(self):
+        """
+        Groups the data by 'idx' field to prepare for prompt construction.
+        """
+        grouped = {}
+        for item in self.data:
+            idx = item.get('idx')
+            if idx is None:
+                raise KeyError("Each data item must have an 'idx' field.")
+            if idx not in grouped:
+                grouped[idx] = []
+            grouped[idx].append(item)
+        print(f"Grouped data into {len(grouped)} groups based on 'idx' field.")
+        return grouped
+
+    def _build_critic_prompts(self):
+        """
+        Constructs critic prompts for each pair of responses within the same group.
+        """
+        res = []
+        for idx, items in self.grouped_data.items():
+            for i, pair in enumerate(items):
+                question = pair.get('question')
+                response_1 = pair.get('chosen')
+                if question is None or response_1 is None:
+                    raise KeyError("Each data item must have 'question' and 'chosen' fields.")
+
+                for j, compare in enumerate(items):
+                    if j == i:
+                        continue
+                    response_2 = compare.get('chosen')
+                    if response_2 is None:
+                        raise KeyError("Each data item must have a 'chosen' field for comparison.")
+
+                    prompt = self.__critic_prompt.format(question, response_1, response_2)
+                    res.append({
+                        'idx': idx,
+                        'inner_idx': i,
+                        'question_id': pair.get('question_id', idx),
+                        'raw_question': prompt,
+                        'image': pair['image'],
+                        'metainfos': {k: v for k, v in pair.items() if
+                                      k not in ["image_id", "question", "image", "chosen"]},
+                        'origin_dataset': self.file,
+                    })
+        print("Completed building critic prompts for all pairs.")
+        return res
+
     def __getitem__(self, index):
-        item = self.data[index]
-        origin_image = None
+        item = self.critic_prompts[index]
+
+        # Process image
         if "image" in item.keys():
             img = item['image']['bytes']
             image = Image.open(io.BytesIO(img)).convert('RGB')
@@ -54,9 +109,10 @@ class GenDataset(torch_data.Dataset):
             image = Image.open(item['metainfos']['image_path']).convert('RGB')
         else:
             raise ValueError("Unable to read image")
-        metainfo = {key: value for key, value in item.items() if key not in ["image_id", "question", "image"]}
 
-        raw_question = item['question']
+        metainfo = {key: value for key, value in item.items() if key not in ["image_id", "question", "image", "chosen"]}
+
+        raw_question = item['raw_question']
 
         question_input_ids = self.question_process(raw_question)
         # print("question_input_ids:", question_input_ids)
@@ -70,11 +126,10 @@ class GenDataset(torch_data.Dataset):
             'raw_question': raw_question,
             'metainfos': metainfo,
             'origin_dataset': self.file,
-            'origin_image': origin_image
         }
 
     def __len__(self):
-        return len(self.data)
+        return len(self.critic_prompts)
 
 
 def wrap_question_for_llava15(question, tokenizer):
@@ -127,8 +182,6 @@ def llava15_qa_colloator_fn(data_list, tokenizer, image_processor, config):
         data['metainfo'] = [x['metainfo'] for x in data_list]
     if 'metainfos' in data_list[0]:
         data['metainfos'] = [x['metainfos'] for x in data_list]
-    if 'origin_image' in data_list[0]:
-        data['origin_image'] = [x['origin_image'] for x in data_list]
 
     return data
 
@@ -221,12 +274,11 @@ if __name__ == '__main__':
                     return_dict_in_generate=True,
                     modalities=["image"] * args.batch_size)
 
-            for question, output_ids, question_id, metainfos, origin_image, idx, inner_idx in zip(
+            for question, output_ids, question_id, metainfos, idx, inner_idx in zip(
                     batch['raw_questions'],
                     output.sequences.cpu(),
                     batch['question_id'],
                     batch['metainfos'],
-                    batch['origin_image'],
                     batch['idx'],
                     batch['inner_idx']):
                 response = tokenizer.decode(
@@ -246,7 +298,6 @@ if __name__ == '__main__':
                     'answer': response,
                     'metainfos': serialized_metainfos,
                     'model_path': args.checkpoint,
-                    # 'image': origin_image
                 })
 
             del batch
