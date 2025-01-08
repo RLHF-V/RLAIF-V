@@ -1,4 +1,5 @@
 import copy
+import datetime
 import os
 import io
 import warnings
@@ -213,6 +214,7 @@ if __name__ == '__main__':
             backend='nccl',
             world_size=int(os.getenv('WORLD_SIZE', '1')),
             rank=int(os.getenv('RANK', '0')),
+            timeout=datetime.timedelta(days=2)
         )
         torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
@@ -247,6 +249,7 @@ if __name__ == '__main__':
     print(f'Dataloader size is {len(dataloader)}')
 
     outputs = []
+    force_sync = 0
     with torch.inference_mode():
         for batch in tqdm.tqdm(dataloader, f'Generating answers'):
             batch['images'] = [img.cuda(non_blocking=True) for img in batch['images']]
@@ -303,6 +306,10 @@ if __name__ == '__main__':
             del batch
             del output
             torch.cuda.empty_cache()
+            force_sync += 1
+            if force_sync == 50:
+                torch.distributed.barrier()
+                force_sync = 0
 
     print(len(outputs))
 

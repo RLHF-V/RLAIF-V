@@ -1,3 +1,4 @@
+import datetime
 import multiprocessing
 import os
 import sys
@@ -29,6 +30,7 @@ def run(**kwargs):
         backend='nccl',
         world_size=int(os.getenv('WORLD_SIZE', '1')),
         rank=int(os.getenv('RANK', '0')),
+        timeout=datetime.timedelta(days=2)
     )
     torch.cuda.set_device(int(os.getenv('LOCAL_RANK', 0)))
 
