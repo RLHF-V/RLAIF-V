@@ -344,7 +344,7 @@ If you find our model/code/data/paper helpful, please consider cite our papers ð
 
 @article{yu2024rlaifv,
   title={RLAIF-V: Open-Source AI Feedback Leads to Super GPT-4V Trustworthiness},
-  author={Yu, Tianyu and Zhang, Haoye and Yao, Yuan and Dang, Yunkai and Chen, Da and Lu, Xiaoman and Cui, Ganqu and He, Taiwen and Liu, Zhiyuan and Chua, Tat-Seng and Sun, Maosong},
+  author={Tianyu Yu and Haoye Zhang and Qiming Li and Qixin Xu and Yuan Yao and Da Chen and Xiaoman Lu and Ganqu Cui and Yunkai Dang and Taiwen He and Xiaocheng Feng and Jun Song and Bo Zheng and Zhiyuan Liu and Tat-Seng Chua and Maosong Sun},
   journal={arXiv preprint arXiv:2405.17220},
   year={2024},
 }
