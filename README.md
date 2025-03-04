@@ -42,22 +42,16 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 
 
 
-* 🤝 **High-quality Generalizable Feedback Data**. The feedback data usesed by RLAIF-V **effectively reduce the hallucination of different MLLMs**.
+* 🤝 **High-quality Generalizable Feedback Data (Figure 4)**. The feedback data usesed by RLAIF-V **effectively reduce the hallucination of different MLLMs**.
 
 <table align="center">
     <p align="center">
-      <img src="examples/introduction2.png" width="80%" alt="introduction2" />
+      <img src="examples/introduction2.jpg" width="80%" alt="introduction2" />
     </p>
 </table>
 
 
-* 🚀 **Inference-time Scaling by RLAIF-V reward**. RLAIF-V reward consistently improves the trustworthiness performance of different models when scaling up inference bugdets.
-
-<table align="center">
-    <p align="center">
-      <img src="examples/introduction3.png" width="50%" alt="introduction3" />
-    </p>
-</table>
+* 🚀 **Inference-time Scaling by RLAIF-V reward (Figure 5)**. RLAIF-V reward consistently improves the trustworthiness performance of different models when scaling up inference bugdets.
 
 
 ## 📌Contents <!-- omit in toc -->

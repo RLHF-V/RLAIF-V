@@ -39,21 +39,15 @@
 
 
 
-* 🤝 **高质量的通用反馈数据。** RLAIF-V 使用的反馈数据可以**有效减少不同多模态大模型的幻觉**。
+* 🤝 **高质量的通用反馈数据 (Figure 4)。**RLAIF-V 使用的反馈数据可以**有效减少不同多模态大模型的幻觉**。
 
 <table align="center">
     <p align="center">
-      <img src="examples/introduction2.png" width="80%" alt="introduction2" />
+      <img src="examples/introduction2.jpg" width="80%" alt="introduction2" />
     </p>
 </table>
 
-* 🚀 **对齐后模型指导的推理时增强。** 以 RLAIF-V 模型作为奖励模型可以在扩大推理预算时持续提高不同模型的可信度表现。
-
-<table align="center">
-    <p align="center">
-      <img src="examples/introduction3.png" width="50%" alt="introduction3" />
-    </p>
-</table>
+* 🚀 **对齐后模型指导的推理时增强 (Figure 5)。** 以 RLAIF-V 模型作为奖励模型可以在扩大推理预算时持续提高不同模型的可信度表现。
 
 
 ## 📌目录 <!-- omit in toc -->
