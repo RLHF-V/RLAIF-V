@@ -13,10 +13,7 @@ from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutpu
 
 from omnilmm.model.utils import build_transform
 from omnilmm.model.resampler import Resampler
-
-DEFAULT_IMAGE_PATCH_TOKEN = "<im_patch>"
-DEFAULT_IM_START_TOKEN = "<im_start>"
-DEFAULT_IM_END_TOKEN = "<im_end>"
+from omnilmm.constants import DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 
 class OmniLMMConfig(MistralConfig):
@@ -115,7 +112,7 @@ class OmniLMMModel(MistralModel):
             pixel_values.type(dtype))
         if hasattr(vision_tower, 'num_prefix_tokens') and vision_tower.num_prefix_tokens > 0:
             vision_embedding = vision_embedding[:,
-                                                vision_tower.num_prefix_tokens:]
+                               vision_tower.num_prefix_tokens:]
         res = self.resampler(vision_embedding)
         return res
 
@@ -132,15 +129,20 @@ class OmniLMMModel(MistralModel):
         else:
             vision_hidden_states = data['vision_hidden_states']
 
-        #vllm_embedding = self.llm.model.embed_tokens(data['input_ids']) * self.llm.config.scale_emb
+        # vllm_embedding = self.llm.model.embed_tokens(data['input_ids']) * self.llm.config.scale_emb
         inputs_embeds = self.embed_tokens(data['input_ids'])
         vision_hidden_states = [i.type(inputs_embeds.dtype)
-            if isinstance(i, torch.Tensor) else i for i in vision_hidden_states
-        ]
-
+                                if isinstance(i, torch.Tensor) else i for i in vision_hidden_states
+                                ]
 
         # HACK: replace back original embeddings for LLaVA pretraining
         orig_embeds_params = getattr(self, 'orig_embeds_params', None)
+
+        dummy_image_features = torch.zeros(
+            self.config.num_query,
+            self.config.hidden_size,
+            device=inputs_embeds.device,
+            dtype=inputs_embeds.dtype)
 
         new_input_embeds = []
         cur_image_idx = 0
@@ -154,7 +156,8 @@ class OmniLMMModel(MistralModel):
             if self.vision_config.use_im_start_end:
                 cur_image_features = vision_hidden_states[cur_image_idx]
                 num_patches = cur_image_features.shape[0]
-                if (cur_input_ids == self.vision_config.im_start_token).sum() != (cur_input_ids == self.vision_config.im_end_token).sum():
+                if (cur_input_ids == self.vision_config.im_start_token).sum() != (
+                        cur_input_ids == self.vision_config.im_end_token).sum():
                     raise ValueError(
                         "The number of image start tokens and image end tokens should be the same.")
                 image_start_tokens = torch.where(
@@ -167,11 +170,18 @@ class OmniLMMModel(MistralModel):
                         raise ValueError(
                             "The image end token should follow the image start token.")
                     if orig_embeds_params is not None:
-                        cur_new_input_embeds = torch.cat((cur_input_embeds[:image_start_token_pos].detach(), cur_input_embeds[image_start_token_pos:image_start_token_pos+1], cur_image_features,
-                                                         cur_input_embeds[image_start_token_pos + num_patches + 1:image_start_token_pos + num_patches + 2], cur_input_embeds[image_start_token_pos + num_patches + 2:].detach()), dim=0)
+                        cur_new_input_embeds = torch.cat((cur_input_embeds[:image_start_token_pos].detach(),
+                                                          cur_input_embeds[
+                                                          image_start_token_pos:image_start_token_pos + 1],
+                                                          cur_image_features,
+                                                          cur_input_embeds[
+                                                          image_start_token_pos + num_patches + 1:image_start_token_pos + num_patches + 2],
+                                                          cur_input_embeds[
+                                                          image_start_token_pos + num_patches + 2:].detach()), dim=0)
                     else:
                         cur_new_input_embeds = torch.cat(
-                            (cur_input_embeds[:image_start_token_pos+1], cur_image_features, cur_input_embeds[image_start_token_pos + num_patches + 1:]), dim=0)
+                            (cur_input_embeds[:image_start_token_pos + 1], cur_image_features,
+                             cur_input_embeds[image_start_token_pos + num_patches + 1:]), dim=0)
                     cur_image_idx += 1
                 new_input_embeds.append(cur_new_input_embeds)
             else:
@@ -181,80 +191,91 @@ class OmniLMMModel(MistralModel):
         return inputs_embeds, vision_hidden_states
 
     def forward(
-        self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        images: Optional[torch.FloatTensor] = None,
-        return_dict: Optional[bool] = None,
-        **kwargs
+            self,
+            input_ids: torch.LongTensor = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            past_key_values: Optional[List[torch.FloatTensor]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            images: Optional[torch.FloatTensor] = None,
+            return_dict: Optional[bool] = None,
+            **kwargs
     ) -> Union[Tuple, BaseModelOutputWithPast]:
 
         # HACK: replace back original embeddings for LLaVA pretraining
         orig_embeds_params = getattr(self, 'orig_embeds_params', None)
 
         if inputs_embeds is None and past_key_values is None:
-          inputs_embeds = self.embed_tokens(input_ids)
+            inputs_embeds = self.embed_tokens(input_ids)
 
-          vision_tower = getattr(self, 'vision_tower', None)
-          if vision_tower is not None and (input_ids.shape[1] != 1 or self.training) and images is not None:
+            vision_tower = getattr(self, 'vision_tower', None)
+            if vision_tower is not None and (input_ids.shape[1] != 1 or self.training) and images is not None:
 
-            if type(images) is list:
-                image_features = []
-                for image in images:
-                    image_forward_out = self.get_vision_embedding(image.unsqueeze(0))[
-                        0]
-                    image_features.append(image_forward_out)
-            else:
-                image_features = self.get_vision_embedding(images)
-
-            dummy_image_features = torch.zeros(
-                self.config.num_query,
-                self.config.hidden_size,
-                device=inputs_embeds.device,
-                dtype=inputs_embeds.dtype)
-
-            new_input_embeds = []
-            cur_image_idx = 0
-            for cur_input_ids, cur_input_embeds in zip(input_ids, inputs_embeds):
-                if (cur_input_ids == self.vision_config.im_patch_token).sum() == 0:
-                    # multimodal LLM, but the current sample is not multimodal
-                    cur_input_embeds = cur_input_embeds + \
-                        (0. * dummy_image_features).sum()
-                    new_input_embeds.append(cur_input_embeds)
-                    continue
-
-                if self.vision_config.use_im_start_end:
-                    cur_image_features = image_features[cur_image_idx]
-                    num_patches = cur_image_features.shape[0]
-                    if (cur_input_ids == self.vision_config.im_start_token).sum() != (cur_input_ids == self.vision_config.im_end_token).sum():
-                        raise ValueError(
-                            "The number of image start tokens and image end tokens should be the same.")
-                    image_start_tokens = torch.where(
-                        cur_input_ids == self.vision_config.im_start_token)[0]
-                    for image_start_token_pos in image_start_tokens:
-                        cur_image_features = image_features[cur_image_idx].to(
-                            device=cur_input_embeds.device)
-                        num_patches = cur_image_features.shape[0]
-                        if cur_input_ids[image_start_token_pos + num_patches + 1] != self.vision_config.im_end_token:
-                            raise ValueError(
-                                "The image end token should follow the image start token.")
-                        if orig_embeds_params is not None:
-                            cur_new_input_embeds = torch.cat((cur_input_embeds[:image_start_token_pos].detach(), cur_input_embeds[image_start_token_pos:image_start_token_pos+1], cur_image_features,
-                                                             cur_input_embeds[image_start_token_pos + num_patches + 1:image_start_token_pos + num_patches + 2], cur_input_embeds[image_start_token_pos + num_patches + 2:].detach()), dim=0)
-                        else:
-                            cur_new_input_embeds = torch.cat(
-                                (cur_input_embeds[:image_start_token_pos+1], cur_image_features, cur_input_embeds[image_start_token_pos + num_patches + 1:]), dim=0)
-                        cur_image_idx += 1
-                    new_input_embeds.append(cur_new_input_embeds)
+                if type(images) is list:
+                    image_features = []
+                    for image in images:
+                        image_forward_out = self.get_vision_embedding(image.unsqueeze(0))[
+                            0]
+                        image_features.append(image_forward_out)
                 else:
-                    raise NotImplementedError
-            inputs_embeds = torch.stack(new_input_embeds, dim=0)
-            input_ids = None
+                    image_features = self.get_vision_embedding(images)
+
+                dummy_image_features = torch.zeros(
+                    self.config.num_query,
+                    self.config.hidden_size,
+                    device=inputs_embeds.device,
+                    dtype=inputs_embeds.dtype)
+
+                new_input_embeds = []
+                cur_image_idx = 0
+                for cur_input_ids, cur_input_embeds in zip(input_ids, inputs_embeds):
+                    if (cur_input_ids == self.vision_config.im_patch_token).sum() == 0:
+                        # multimodal LLM, but the current sample is not multimodal
+                        cur_input_embeds = cur_input_embeds + \
+                                           (0. * dummy_image_features).sum()
+                        new_input_embeds.append(cur_input_embeds)
+                        continue
+
+                    if self.vision_config.use_im_start_end:
+                        cur_image_features = image_features[cur_image_idx]
+                        num_patches = cur_image_features.shape[0]
+                        if (cur_input_ids == self.vision_config.im_start_token).sum() != (
+                                cur_input_ids == self.vision_config.im_end_token).sum():
+                            raise ValueError(
+                                "The number of image start tokens and image end tokens should be the same.")
+                        image_start_tokens = torch.where(
+                            cur_input_ids == self.vision_config.im_start_token)[0]
+                        for image_start_token_pos in image_start_tokens:
+                            cur_image_features = image_features[cur_image_idx].to(
+                                device=cur_input_embeds.device)
+                            num_patches = cur_image_features.shape[0]
+                            if cur_input_ids[
+                                image_start_token_pos + num_patches + 1] != self.vision_config.im_end_token:
+                                raise ValueError(
+                                    "The image end token should follow the image start token.")
+                            if orig_embeds_params is not None:
+                                cur_new_input_embeds = (
+                                    torch.cat((cur_input_embeds[:image_start_token_pos].detach(),
+                                               cur_input_embeds[
+                                               image_start_token_pos:image_start_token_pos + 1],
+                                               cur_image_features,
+                                               cur_input_embeds[
+                                               image_start_token_pos + num_patches + 1:image_start_token_pos + num_patches + 2],
+                                               cur_input_embeds[
+                                               image_start_token_pos + num_patches + 2:].detach()),
+                                              dim=0))
+                            else:
+                                cur_new_input_embeds = torch.cat(
+                                    (cur_input_embeds[:image_start_token_pos + 1], cur_image_features,
+                                     cur_input_embeds[image_start_token_pos + num_patches + 1:]), dim=0)
+                            cur_image_idx += 1
+                        new_input_embeds.append(cur_new_input_embeds)
+                    else:
+                        raise NotImplementedError
+                inputs_embeds = torch.stack(new_input_embeds, dim=0)
+                input_ids = None
 
         return super(OmniLMMModel, self).forward(
             input_ids=input_ids, attention_mask=attention_mask, past_key_values=past_key_values,
@@ -280,18 +301,18 @@ class OmniLMMForCausalLM(MistralForCausalLM):
         self.post_init()
 
     def forward(
-        self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        images: Optional[torch.FloatTensor] = None,
-        return_dict: Optional[bool] = None,
-        **kwargs
+            self,
+            input_ids: torch.LongTensor = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            past_key_values: Optional[List[torch.FloatTensor]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None,
+            labels: Optional[torch.LongTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            images: Optional[torch.FloatTensor] = None,
+            return_dict: Optional[bool] = None,
+            **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -347,7 +368,7 @@ class OmniLMMForCausalLM(MistralForCausalLM):
 
     # TODO could be removed for generate_vllm()
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
+            self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
         if past_key_values:
             input_ids = input_ids[:, -1:]
@@ -369,12 +390,12 @@ class OmniLMMForCausalLM(MistralForCausalLM):
         return model_inputs
 
     def generate_vllm(
-        self,
-        input_ids: torch.LongTensor = None,
-        images: Optional[torch.FloatTensor] = None,
-        vision_hidden_states=None,
-        return_vision_hidden_states=False,
-        **kwargs
+            self,
+            input_ids: torch.LongTensor = None,
+            images: Optional[torch.FloatTensor] = None,
+            vision_hidden_states=None,
+            return_vision_hidden_states=False,
+            **kwargs
     ):
         model_inputs = {'input_ids': input_ids}
         if vision_hidden_states is None:
@@ -394,7 +415,6 @@ class OmniLMMForCausalLM(MistralForCausalLM):
             return result, vision_hidden_states
 
         return result
-
 
     def initialize_vision_tokenizer(self, mm_use_im_start_end, tokenizer, device,
                                     tune_mm_mlp_adapter=False):
@@ -448,7 +468,9 @@ class OmniLMMForCausalLM(MistralForCausalLM):
 
         self.model.vision_config.im_patch_token = tokenizer.convert_tokens_to_ids(
             [DEFAULT_IMAGE_PATCH_TOKEN])[0]
-        print(f'Tokenizer: {tokenizer}\n patch_token_id: {self.model.vision_config.im_patch_token}, visoin_config: {self.model.vision_config}', flush=True)
+        print(
+            f'Tokenizer: {tokenizer}\n patch_token_id: {self.model.vision_config.im_patch_token}, visoin_config: {self.model.vision_config}',
+            flush=True)
         # exit()
 
 

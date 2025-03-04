@@ -1,4 +1,5 @@
 export PYTHONPATH=$PYTHONPATH:`realpath .`
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 
 task_name=llava15_7b_DPO
 exp_name=llava15_rlaifv

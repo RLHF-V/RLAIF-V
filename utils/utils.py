@@ -12,12 +12,17 @@
 # --------------------------------------------------------'
 import pickle
 
+import math
 import torch
 import torch.distributed as dist
 
 import torch.nn as nn
 import matplotlib.pyplot as plt
 
+def logp_invalid(logp):
+    if math.isnan(logp) or math.isinf(logp) or logp == 0:
+        return True
+    return False
 
 def weights_init(m):
     classname = m.__class__.__name__
