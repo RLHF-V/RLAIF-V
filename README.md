@@ -3,7 +3,7 @@
 
 <img src="examples/logo.png" width="30%" alt="RLAIF-V" />
 
-**Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness**
+**Open-Source AI Feedback Leads to Super GPT-4V Trustworthiness**
 
 <a href='https://arxiv.org/abs/2405.17220'><img src='https://img.shields.io/badge/Paper-PDF-purple'></a>
 <a href='https://huggingface.co/datasets/openbmb/RLAIF-V-Dataset'><img src='https://img.shields.io/badge/Dataset-HF-Green'></a>
@@ -36,7 +36,7 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 
 <table align="center">
     <p align="center">
-      <img src="examples/introduction1.jpg" width="80%" alt="introduction1" />
+      <img src="examples/introduction1.png" width="80%" alt="introduction1" />
     </p>
 </table>
 
@@ -46,16 +46,16 @@ We introduce RLAIF-V, a novel framework that aligns MLLMs in a fully open-source
 
 <table align="center">
     <p align="center">
-      <img src="examples/introduction3.jpg" width="80%" alt="introduction3" />
+      <img src="examples/introduction2.png" width="80%" alt="introduction2" />
     </p>
 </table>
 
 
-* ⚡️ **Efficient Feedback Learning with Iterative Alignment.** RLAIF-V exihibts both **better learning efficiency and higher performance** compared with the non-iterative approach.
+* 🚀 **Inference-time Scaling by RLAIF-V reward**. RLAIF-V reward consistently improves the trustworthiness performance of different models when scaling up inference bugdets.
 
 <table align="center">
     <p align="center">
-      <img src="examples/introduction2.png" width="80%" alt="introduction2" />
+      <img src="examples/introduction3.png" width="50%" alt="introduction3" />
     </p>
 </table>
 
@@ -334,6 +334,7 @@ bash ./script/eval/run_refomb_hall.sh $eval_result
 - [RLHF-V](https://github.com/RLHF-V/RLHF-V): The codebase we built upon.
 - [LLaVA](https://github.com/haotian-liu/LLaVA): The instruction model and labeler model of RLAIF-V-7B.
 - [MiniCPM-V](https://github.com/OpenBMB/MiniCPM-V): The instruction model and labeler model of RLAIF-V-12B.
+- [MiniCPM-o](https://github.com/OpenBMB/MiniCPM-o): The end-to-end omni-modal model using RLAIF-V method for alignment.
 
 ## Citation
 
@@ -348,7 +349,7 @@ If you find our model/code/data/paper helpful, please consider cite our papers �
 }
 
 @article{yu2024rlaifv,
-  title={RLAIF-V: Aligning MLLMs through Open-Source AI Feedback for Super GPT-4V Trustworthiness},
+  title={RLAIF-V: Open-Source AI Feedback Leads to Super GPT-4V Trustworthiness},
   author={Yu, Tianyu and Zhang, Haoye and Yao, Yuan and Dang, Yunkai and Chen, Da and Lu, Xiaoman and Cui, Ganqu and He, Taiwen and Liu, Zhiyuan and Chua, Tat-Seng and Sun, Maosong},
   journal={arXiv preprint arXiv:2405.17220},
   year={2024},
