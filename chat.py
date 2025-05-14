@@ -222,7 +222,7 @@ class RLAIFVChat:
     def __init__(self, model_path) -> None:
         if '12B' in model_path:
             self.model = RLAIFV12B(model_path)
-        else if '7B' in model_path:
+        elif '7B' in model_path:
             self.model = RLAIFV7B(model_path)
             if 'lora_checkpoint' in model_path:
                 self.model = RLAIFV7BLoRA(model_path, model_base='liuhaotian/llava-v1.5-7b')
