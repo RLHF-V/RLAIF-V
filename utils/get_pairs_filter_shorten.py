@@ -13,7 +13,7 @@ def filter_pair_by_len(all_pairs_dicts, diff_len):
             continue
 
         if pair['chosen'].strip() == pair['rejected'].strip():
-            print(diff_len, "chosen==rejected")
+            # print(diff_len, "chosen==rejected")
             continue
 
         remain_pair.append(pair)
