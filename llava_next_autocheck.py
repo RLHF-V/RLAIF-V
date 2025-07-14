@@ -3,6 +3,7 @@ from tqdm import tqdm
 import torch
 from PIL import Image
 from transformers import AutoTokenizer, CLIPImageProcessor, LlavaNextProcessor, LlavaNextForConditionalGeneration
+from llava.mm_utils import process_images
 from utils.file_io import read_jsonlines, write_jsonlines
 
 def yes_probability(logits, yes_ids, no_ids):
